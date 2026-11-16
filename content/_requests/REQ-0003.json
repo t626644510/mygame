@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "REQ-0003",
+  "kind": "new_item_property",
+  "owner": "engineering",
+  "target": "global",
+  "title": "物品定义与实例分离（P0 样例）",
+  "body": "in_progress 仅为工单指定的静态样例状态，不代表真实工作已获授权或正在执行；R3 不在本轮范围。",
+  "status": "in_progress",
+  "createdAt": "2026-11-15"
+}

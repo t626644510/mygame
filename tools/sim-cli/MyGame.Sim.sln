@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{79CD4561-2D34-452B-81BB-A83B7A4F749F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prototype.Combat", "src\Prototype.Combat\Prototype.Combat.csproj", "{65D4D5CC-8B5D-454D-854F-287A470311AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prototype.BaseEconomy", "src\Prototype.BaseEconomy\Prototype.BaseEconomy.csproj", "{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prototype.Tactics", "src\Prototype.Tactics\Prototype.Tactics.csproj", "{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prototype.Expedition", "src\Prototype.Expedition\Prototype.Expedition.csproj", "{32A64792-8F5D-4D3E-8AAD-28DE4299D700}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGame.Sim.Cli", "src\MyGame.Sim.Cli\MyGame.Sim.Cli.csproj", "{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{65D4D5CC-8B5D-454D-854F-287A470311AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65D4D5CC-8B5D-454D-854F-287A470311AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65D4D5CC-8B5D-454D-854F-287A470311AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65D4D5CC-8B5D-454D-854F-287A470311AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32A64792-8F5D-4D3E-8AAD-28DE4299D700}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32A64792-8F5D-4D3E-8AAD-28DE4299D700}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32A64792-8F5D-4D3E-8AAD-28DE4299D700}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32A64792-8F5D-4D3E-8AAD-28DE4299D700}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{65D4D5CC-8B5D-454D-854F-287A470311AD} = {79CD4561-2D34-452B-81BB-A83B7A4F749F}
+		{9E9D346F-FA1B-45FE-B18B-D6CCD15F812C} = {79CD4561-2D34-452B-81BB-A83B7A4F749F}
+		{49CF3026-C7AE-421B-BF4D-4443FD7AAA7C} = {79CD4561-2D34-452B-81BB-A83B7A4F749F}
+		{32A64792-8F5D-4D3E-8AAD-28DE4299D700} = {79CD4561-2D34-452B-81BB-A83B7A4F749F}
+		{8B8D9C14-E0D8-49BC-A10F-30D340E22EE2} = {79CD4561-2D34-452B-81BB-A83B7A4F749F}
+	EndGlobalSection
+EndGlobal
