@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/trial.schema.json",
+  "title": "P2 trial",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "allies",
+    "encounters",
+    "draft"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      }
+    },
+    "notes": {
+      "description": "Helper-only metadata; export removes it."
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "title": {
+      "type": "string"
+    },
+    "parameterNotice": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "playerTeam": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "allies": {
+      "type": "array",
+      "items": {
+        "$ref": "combat-common.schema.json#/$defs/slot"
+      }
+    },
+    "encounters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "encounterId"
+        ],
+        "properties": {
+          "encounterId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "waitBefore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rulesId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        }
+      }
+    },
+    "carryTeam": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rulesId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "runBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxSteps",
+        "maxWait"
+      ],
+      "properties": {
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "maxWait": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

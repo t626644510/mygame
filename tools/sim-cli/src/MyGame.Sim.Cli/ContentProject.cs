@@ -63,10 +63,11 @@ public sealed class ContentProject
     public IEnumerable<RequestRecord> Requests() => Documents.Values.Where(doc => doc.Type == "request")
         .Select(doc => UnityJson.Read<RequestRecord>(doc.Value.ToJsonString()));
 
-    public bool HasImplementationRequest(string canonicalId) => Documents.Values.Where(doc => doc.Type == "request").Any(doc =>
+    public bool HasImplementationRequest(string canonicalId, string type = "item") => Documents.Values.Where(doc => doc.Type == "request").Any(doc =>
     {
         string target = Text(doc.Value["target"]);
-        return target.StartsWith("item:", StringComparison.Ordinal) && Lookup(target[5..]).canonicalId == canonicalId &&
+        return target.StartsWith(type + ":", StringComparison.Ordinal) && Lookup(target[(type.Length + 1)..]).canonicalId == canonicalId &&
+            (type is not "skill" and not "character" || Text(doc.Value["owner"]) == "combat") &&
             Text(doc.Value["kind"]) is not "" and not "note";
     });
 
@@ -85,10 +86,11 @@ public sealed class ContentProject
                 errors.AddRange(RequestStore.ValidateRecord(json.RootElement, doc.Path, Path.GetFileNameWithoutExtension(doc.Path)));
                 if (!requests.Add(id)) errors.Add(Error(doc.Path, "/id", "duplicate_id", "需求ID重复：" + id));
                 string target = Text(value["target"]);
-                if (target.StartsWith("item:", StringComparison.Ordinal))
+                int separator = target.IndexOf(':');
+                if (separator > 0 && ContentStore.EntityTypes.Contains(target[..separator]))
                 {
-                    IdLookup lookup = Lookup(target[5..]);
-                    if (!lookup.exists || lookup.type != "item") errors.Add(Error(doc.Path, "/target", "target_missing", "需求指向的物品不存在：" + target));
+                    IdLookup lookup = Lookup(target[(separator + 1)..]);
+                    if (!lookup.exists || lookup.type != target[..separator]) errors.Add(Error(doc.Path, "/target", "target_missing", "需求指向的实体不存在：" + target));
                 }
                 continue;
             }
@@ -110,6 +112,7 @@ public sealed class ContentProject
                 }
             else if (value["aliases"] is not null) errors.Add(Error(doc.Path, "/aliases", "type", "aliases必须是字符串数组。"));
             if (doc.Type == "item") errors.AddRange(ItemValidation.Validate(doc, this));
+            if (CombatContent.Types.Contains(doc.Type)) errors.AddRange(CombatContent.Validate(doc, this));
 
             void Add(string name, string field)
             {
@@ -145,11 +148,11 @@ public sealed class ContentProject
     public int NextRequestNumber() => Documents.Values.Where(doc => doc.Type == "request").Select(doc => Text(doc.Value["id"]))
         .Where(id => Regex.IsMatch(id, "^REQ-[0-9]{4}$", RegexOptions.CultureInvariant)).Select(id => int.Parse(id.AsSpan(4), System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(0).Max() + 1;
 
-    public static JsonObject CompleteRequest(JsonObject draft, string itemId, int number)
+    public static JsonObject CompleteRequest(JsonObject draft, string itemId, int number, string type = "item")
     {
         JsonObject result = (JsonObject)draft.DeepClone();
-        string target = "item:" + itemId;
-        if (result["target"] is not null && Text(result["target"]) != target) throw new ArgumentException("Compound请求target必须与保存物品一致。");
+        string target = type + ":" + itemId;
+        if (result["target"] is not null && Text(result["target"]) != target) throw new ArgumentException("Compound请求target必须与保存实体一致。");
         if (result["status"] is not null && Text(result["status"]) != "open") throw new ArgumentException("新需求只能是open，分拣权属于策划或User。");
         result["schemaVersion"] = 1; result["id"] = "REQ-" + number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
         result["target"] = target; result["status"] = "open";

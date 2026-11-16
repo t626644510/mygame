@@ -9,7 +9,7 @@ namespace MyGame.Sim.Cli;
 
 public sealed class LocalServer(ContentStore content, string repository, string? exportDirectory = null)
 {
-    public const string Version = "0.2.0-p1";
+    public const string Version = "0.3.0-p2";
     private readonly SemaphoreSlim gate = new(1, 1);
     private string ExportRoot => Path.GetFullPath(exportDirectory ?? (string.Equals(content.Root, Path.Combine(repository, "content"), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
         ? Path.Combine(repository, "Game", "Assets", "StreamingAssets", "Content") : Path.Combine(content.Root, "..", "runtime")));
@@ -63,11 +63,39 @@ public sealed class LocalServer(ContentStore content, string repository, string?
                 await Reply(200, new { ok = true, version = Version, contentRoot = content.Root, exportRoot = ExportRoot, gitCommit = GitCommit(repository) });
             else if (request.Method == "GET" && path == "/api/catalog") await Reply(200, Simulation.Catalog());
             else if (request.Method == "GET" && path == "/api/capabilities")
-                await Reply(200, new { schemaVersion = 1, contentTypes = ContentStore.EntityTypes.Select(type => new { id = type, plural = ContentStore.DirectoryFor(type), label = type == "item" ? "物品" : type, editable = type == "item" }).ToArray(),
+                await Reply(200, new { schemaVersion = 1, contentTypes = ContentStore.EntityTypes.Select(type => new { id = type, plural = ContentStore.DirectoryFor(type), label = type == "item" ? "物品" : type, editable = type == "item" || CombatContent.Types.Contains(type) && type != "rule" }).ToArray(),
                     itemCategories = ItemValidation.Categories, equipmentSlots = ItemValidation.Slots,
                     combatBonusFields = JsonSerializer.SerializeToElement(Simulation.Catalog(), new JsonSerializerOptions { IncludeFields = true }).GetProperty("combatBonusFields"), consumableEffectKinds = Array.Empty<string>(), exportRoot = ExportRoot });
             else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "ids") await Reply(200, Project().Lookup(parts[2]));
             else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "refs") await Reply(200, ReferenceIndex.Refs(Project(), parts[2]));
+            else if (request.Method == "POST" && path is "/api/import-scenario" or "/api/import-expedition")
+            {
+                JsonObject body = CombatContent.Object(JsonNode.Parse(await Body()));
+                if (body.Any(p => p.Key is not "sourceName" and not "jsonText" and not "prefix")) throw new ArgumentException("Unknown import field.");
+                await Reply(200, CombatImport.Import(Project(), CombatContent.Text(body["jsonText"]), CombatContent.Text(body["sourceName"]), path == "/api/import-expedition", body.ContainsKey("prefix") ? CombatContent.Text(body["prefix"]) : null));
+            }
+            else if (request.Method == "POST" && path == "/api/assemble") await Reply(200, CombatAssembly.Build(Project(), JsonNode.Parse(await Body())).Envelope());
+            else if (request.Method == "POST" && path == "/api/trial/run") await Reply(200, CombatRuns.Run(Project(), JsonNode.Parse(await Body())));
+            else if (request.Method == "POST" && path == "/api/trial/compare") await Reply(200, CombatRuns.Compare(Project(), CombatContent.Object(JsonNode.Parse(await Body()))));
+            else if (request.Method == "POST" && path == "/api/character/validate") await Reply(200, CombatRuns.Character(Project(), CombatContent.Object(JsonNode.Parse(await Body()))));
+            else if (request.Method == "POST" && path == "/api/export-scenario")
+            {
+                JsonObject body = CombatContent.Object(JsonNode.Parse(await Body()));
+                if (body.Count != 1 || CombatContent.Text(body["trialId"]) == "") throw new ArgumentException("export-scenario body必须仅为{trialId}。");
+                await Reply(200, CombatRuns.ExportScenario(Project(), CombatContent.Text(body["trialId"])));
+            }
+            else if (request.Method == "POST" && path == "/api/validate-entity")
+            {
+                JsonObject body = CombatContent.Object(JsonNode.Parse(await Body()));
+                if (body.Any(p => p.Key is not "type" and not "mode" and not "entity" and not "requests" and not "editIntent")) throw new ArgumentException("未知entity校验字段。");
+                if (body["requests"] is not null && body["requests"] is not JsonArray) throw new ArgumentException("requests必须是数组。");
+                ContentProject project = Project();
+                string type = ContentStore.CanonicalType(CombatContent.Text(body["type"]));
+                JsonObject entity = CombatContent.Object(body["entity"]);
+                ContentValidation result = CombatContent.ValidateCandidate(project, type, entity, CombatContent.Text(body["mode"]), body["requests"] as JsonArray);
+                if (result.ok && CombatContent.Types.Contains(type)) CombatImport.TrackEdits(project, type, CombatContent.Text(entity["id"]), entity, body["editIntent"], new Dictionary<string, string?>(StringComparer.Ordinal));
+                await Reply(result.ok ? 200 : 422, result);
+            }
             else if (request.Method == "POST" && path == "/api/validate-item")
             {
                 JsonObject body = JsonNode.Parse(await Body()) as JsonObject ?? throw new ArgumentException("校验body必须是对象。");

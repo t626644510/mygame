@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/combat-import.schema.json",
+  "title": "P2 combat-import",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "sourceKind",
+    "sourceName",
+    "sourceSha256",
+    "sourceJson",
+    "bindings",
+    "edits"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "sourceKind": {
+      "enum": [
+        "scenario",
+        "expedition"
+      ]
+    },
+    "sourceName": {
+      "type": "string"
+    },
+    "sourceSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceJson": {
+      "type": "string",
+      "contentMediaType": "application/json"
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id",
+          "sourcePointer",
+          "baselineJson"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "skill",
+              "character",
+              "encounter",
+              "trial",
+              "rule"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "sourcePointer": {
+            "type": "string"
+          },
+          "baselineJson": {
+            "type": "string",
+            "contentMediaType": "application/json"
+          }
+        }
+      }
+    },
+    "edits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id",
+          "path",
+          "op"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "skill",
+              "character",
+              "encounter",
+              "trial",
+              "rule"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "op": {
+            "enum": [
+              "set",
+              "remove"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

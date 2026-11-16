@@ -250,7 +250,7 @@ try {
     invalidScenario.id = 'scenario_invalid_runtime';
     require422(await unchanged(content, () => api('/api/content/scenario/scenario_invalid_runtime', 'PUT', invalidScenario, { 'If-None-Match': '*' })));
     const validAgain = await api('/api/content/scenario/scenario_runtime_probe', 'PUT', validScenario, { 'If-Match': scenarioEtag }); assert.equal(validAgain.status, 200);
-    await writeJson(path.join(content, 'skills/skill_pool_owner.json'), { schemaVersion: 1, id: 'skill_pool_owner', aliases: ['mat_cross_reserved'] });
+    await writeJson(path.join(content, 'skills/skill_pool_owner.json'), { schemaVersion: 1, id: 'skill_pool_owner', aliases: ['mat_cross_reserved'], effectKind: 'damage', magnitude: 1, mpCost: 0, baseWait: 1, draft: false });
     require422(await unchanged(content, () => api('/api/validate-item', 'POST', { entity: bareItem('mat_cross_reserved'), mode: 'create' })));
     const crossAlias = bareItem('mat_cross_alias'); crossAlias.aliases = ['skill_pool_owner'];
     require422(await unchanged(content, () => api('/api/validate-item', 'POST', { entity: crossAlias, mode: 'create' })));

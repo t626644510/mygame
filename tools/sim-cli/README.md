@@ -105,7 +105,7 @@ HTTP 使用 **ASP.NET Core Minimal API / Kestrel**，依赖随 SDK 安装的共�
 | GET | `/api/requests` | JSON 需求数组（CLI requests 生成 Markdown 汇总） |
 | POST | `/api/requests` | kind/owner/target/title，另可带 body/field/expected/createdAt；服务端分 ID，创建 201 |
 
-模拟类 HTTP 与对应 CLI 共用序列化器，输出逐字节相同。P1 的 `validate --content` 包含物品 schema、文件名、跨实体 ID/alias 唯一性、材料引用及物品需求目标。技能、建筑等模块的专用规则属于各自后续工单。
+模拟类 HTTP 与对应 CLI 共用序列化器，输出逐字节相同。P1 的 `validate --content` 包含物品 schema、文件名、跨实体 ID/alias 唯一性、材料引用及物品需求目标。P2 增加技能/角色/遭遇/试炼/规则专用校验，建筑等后续模块仍按自己的工单处理。
 
 物品新建使用 `If-None-Match: *`；更新使用 GET 返回的完整含引号 `If-Match`。409 返回当前磁盘对象和当前 ETag；客户端选择保留自己的修改后仍须带该新 ETag 重试。PUT 路径与对象 ID 不同为 422。纯校验入口的 create 重复 ID/alias 为 422；真正 PUT 已存在同 URL 且带 `If-None-Match: *` 为 409。两种操作的区别和字段错误 DTO 见 [P1_API_CONTRACT.md](../../docs/editor/P1_API_CONTRACT.md)。
 
@@ -138,3 +138,29 @@ pwsh -NoProfile -File tools/sim-cli/verification/Invoke-P0Checks.ps1 -OutputDire
 CLI验收采集器并发读取stdout/stderr的BaseStream，直接保存原始byte[]并按相同bytes计算SHA-256，解码只用于断言，不把产品的LF规范套在证据文件上。HTTP另存真实请求/响应body字节、status/headers、监听表及完整TCP路径错误响应。`--http-only`、`--errors-only`是验收程序的局部补证参数，不是产品命令。
 
 `verification/expected-round4-sha256.json` 保存独立审计冻结的本机历史 Windows 10 份原始报告哈希；`expected-round4-sha256-lf.json` 是由相同冻结字节仅替换 CRLF→LF后计算的派生哈希，用于明确 macOS 换行差异，两者没有改写原档。最终 A5 仍要求 CLI 与原生成器在同平台重新生成的原始字节相等。固定源码基线为 `1706cbb353856b5b6f20c492268e3382a899a6b4`，不以移动 main 的空 diff 自证。完整状态见 [P0_VERIFICATION.md](../../docs/editor/P0_VERIFICATION.md)。
+
+## P2 战斗内容与来源往返
+
+后端仍由 `sim-cli serve` 提供，前端见 `tools/editor-web`。HTTP 只监听 loopback，来源文件由客户端上传 JSON 文本，不接受任意服务端文件路径。HTTP `export-scenario` 固定写当前 content 下的 `_exports`；完整 DTO、编辑意图、规则来源和错误格式见 [P2_API_CONTRACT.md](../../docs/editor/P2_API_CONTRACT.md)。
+
+```powershell
+# 使用新隔离根；保留既有物品、aliases、需求样例与规则模板。
+if (Test-Path work/example) { throw '请选择新的隔离目录。' }
+New-Item -ItemType Directory work/example | Out-Null
+Copy-Item -LiteralPath content -Destination work/example/content -Recurse
+$cli = 'tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll'
+dotnet $cli import-scenario Game/Assets/StreamingAssets/Prototype/Combat/round4_mage_library.json --content work/example/content
+dotnet $cli assemble trial_round4_mage_library --content work/example/content --out work/example/scenario.json
+dotnet $cli run-trial trial_round4_mage_library --content work/example/content --out work/example/run.json --log work/example/original-core.log
+dotnet $cli export-scenario trial_round4_mage_library --content work/example/content --out work/example/exported.json
+```
+
+17 个单场和 2 个出征应分别使用隔离根。非空库遇同 ID 非等价定义会整笔拒绝，不覆盖或自动改名；例如不同来源的 pressure_strike 18/25 不能合并。`import-expedition` 使用相同的 file、`--content`、`--prefix` 参数。CLI `assemble` 输出纯 CombatScenario 或 CombatExpeditionConfig；HTTP assemble 另带 kind/config/bindings/ruleContexts/resolvedActions。CLI `export-scenario --out` 写纯 Runtime 配置，stdout 回执的 SHA 对应该文件，不将回执写回配置。`run-trial` 使用真实 CombatSession；出征逐场日志从同一次 CombatExpeditionSession 的 1-based ExportEncounterLogText 读取，不重放或拼造日志。
+
+新建配置按 allies→enemies 和动作 ID 排序；导入保留原 Runtime ID、头、seed、预算、presence 及 units/actions 原序，Helper `_imports` 旁车不会进入 Runtime。未编辑取原来源，明确编辑只投影对应字段。规则 UI 只读；每场绑定 `rules_<prefix>_<n>.json`，不相关 rules_combat 模板不会覆盖旧场。换绑规则采用完整目标规则；移除调用预算采用现有核心 10000/100000 缺省，场景预算不变。单场明确增场转为出征并保原首场。角色校验必须与当前 trial/场次同源；多解返回 422 要求选择，容量及 validationReason 来自真实核心，actionAvailable 不表示当前 MP 足够。
+
+同一来源内部的逐场差异显式存为 encounter.actionOverrides 的 typed fields/remove。共享字段先投影，再应用本场固定值；继承、固定值和省略 Runtime 字段三态分开，0/false 不等于缺省。R2 的 18/12 在共享改为 20 后为 20/12；明确移除第二场固定值后为 20/20，保存重开保持。已知相同来源/hash 重导入仍核当前实际定义，仅等价时 no-op，不重置 baseline 或编辑历史。界面 shared/effective 显示值使用同一核心 NormalizeActionDefinition，不倒写来源。
+
+`export` 保留 P1 合法 draft 物品剔除、其他有效项可出的语义；有 P2 内容时增加 skills/characters/encounters 表。实际 active 依赖 draft/未支持能力会阻止运行和导出，并保目标目录不变。trials、来源及编辑 metadata 不导出。新表不代表已实现 R2 全局库 Runtime 消费，也不引入 R1 六维派生、R3 新装备或 P3。
+
+27 个法师动作的实际句子与原字段、来源指纹见 [P2_SKILL_SENTENCES.md](../../docs/editor/P2_SKILL_SENTENCES.md)。CI 的 `verification/Invoke-P2Checks.mjs` 消费前序正式构建，调用独立原核 oracle 核对 C1 的17单场、C2的2联场及C3的4项复用/拒绝；它只覆盖同平台纯 .NET/Node，界面、HTTP及唯一受控Unity证据分别验收。

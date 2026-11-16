@@ -13,12 +13,13 @@ async function call<T>(path: string, init?: RequestInit): Promise<{ value: T; et
   return { value: body as T, etag: response.headers.get('ETag') || '' }
 }
 const json = (value: unknown) => JSON.stringify(value)
+export {call as apiCall}
 export const api = {
   health: async (signal?: AbortSignal) => (await call<{ok: boolean; version: string; contentRoot: string; gitCommit: string}>('/health', {signal})).value,
   catalog: async () => (await call<Catalog>('/catalog')).value,
   capabilities: async () => (await call<Capabilities>('/capabilities')).value,
   list: async (type = 'item') => (await call<EntitySummary[]>(`/content/${type}`)).value,
-  getAny: async (type: string, id: string) => (await call<{id: string; name?: string; aliases?: string[]}>(`/content/${type}/${encodeURIComponent(id)}`)).value,
+  getAny: async (type: string, id: string) => (await call<{id: string; name?: string; title?: string; displayName?: string; aliases?: string[]}>(`/content/${type}/${encodeURIComponent(id)}`)).value,
   get: (id: string) => call<Item>(`/content/item/${encodeURIComponent(id)}`),
   ids: async (id: string) => (await call<IdResult>(`/ids/${encodeURIComponent(id)}`)).value,
   refs: async (id: string) => (await call<Reference[]>(`/refs/${encodeURIComponent(id)}`)).value,

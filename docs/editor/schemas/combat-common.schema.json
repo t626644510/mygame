@@ -1,0 +1,594 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/combat-common.schema.json",
+  "title": "P2 combat-common",
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "effectKind",
+        "magnitude",
+        "mpCost",
+        "baseWait"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effectKind": {
+          "type": "string"
+        },
+        "magnitude": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "mpCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "baseWait": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "statusId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statusKind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statusMagnitude": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "statusDuration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "targetMode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isMagic": {
+          "type": "boolean"
+        },
+        "damageType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "actionFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effectKind": {
+          "type": "string"
+        },
+        "magnitude": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "mpCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "baseWait": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "statusId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statusKind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statusMagnitude": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "statusDuration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "targetMode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isMagic": {
+          "type": "boolean"
+        },
+        "damageType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "instruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "condition",
+        "scope",
+        "selector",
+        "actionId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "terms"
+          ],
+          "properties": {
+            "operation": {
+              "enum": [
+                "all",
+                "any",
+                "mixed"
+              ]
+            },
+            "terms": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "threshold": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "subject": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "operators": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "and",
+                  "or"
+                ]
+              }
+            },
+            "grouping": {
+              "enum": [
+                "left",
+                "right",
+                "",
+                null
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "const": "mixed"
+                  }
+                },
+                "required": [
+                  "operation"
+                ]
+              },
+              "then": {
+                "required": [
+                  "operators",
+                  "grouping"
+                ],
+                "properties": {
+                  "terms": {
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "operators": {
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "grouping": {
+                    "enum": [
+                      "left",
+                      "right"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "actionId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "terms"
+      ],
+      "properties": {
+        "operation": {
+          "enum": [
+            "all",
+            "any",
+            "mixed"
+          ]
+        },
+        "terms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "threshold": {
+                "type": "number",
+                "minimum": 0
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "operators": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "and",
+              "or"
+            ]
+          }
+        },
+        "grouping": {
+          "enum": [
+            "left",
+            "right",
+            "",
+            null
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "mixed"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "required": [
+              "operators",
+              "grouping"
+            ],
+            "properties": {
+              "terms": {
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "operators": {
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "grouping": {
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "magnitude",
+        "appliedAt",
+        "expiresAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "magnitude": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "appliedAt": {
+          "const": 0
+        },
+        "expiresAt": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unitId",
+        "characterId",
+        "row",
+        "column"
+      ],
+      "properties": {
+        "unitId": {
+          "type": "string"
+        },
+        "characterId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "team": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 2147483647
+        },
+        "mp": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 2147483647
+        },
+        "initialReadyTime": {
+          "type": "number",
+          "minimum": 0
+        },
+        "vulnerable": {
+          "type": "boolean"
+        },
+        "statuses": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "magnitude",
+              "appliedAt",
+              "expiresAt"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "magnitude": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "appliedAt": {
+                "const": 0
+              },
+              "expiresAt": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "equipmentDamageBonus": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 2147483647
+        },
+        "equipmentSourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseSlots",
+        "slotsPerIntelligence",
+        "minimumSlots",
+        "maximumSlots",
+        "secondConditionAtIntelligence",
+        "thirdConditionAtIntelligence"
+      ],
+      "properties": {
+        "baseSlots": {
+          "type": "number",
+          "minimum": 0
+        },
+        "slotsPerIntelligence": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minimumSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "maximumSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "secondConditionAtIntelligence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "thirdConditionAtIntelligence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

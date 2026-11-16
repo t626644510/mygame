@@ -11,7 +11,8 @@ public sealed class ContentStore
         ["item"] = "items", ["items"] = "items", ["skill"] = "skills", ["skills"] = "skills",
         ["character"] = "characters", ["characters"] = "characters", ["encounter"] = "encounters", ["encounters"] = "encounters",
         ["building"] = "buildings", ["buildings"] = "buildings", ["recipe"] = "recipes", ["recipes"] = "recipes",
-        ["layout"] = "layouts", ["layouts"] = "layouts", ["scenario"] = "scenarios", ["scenarios"] = "scenarios"
+        ["layout"] = "layouts", ["layouts"] = "layouts", ["scenario"] = "scenarios", ["scenarios"] = "scenarios",
+        ["trial"] = "trials", ["trials"] = "trials", ["rule"] = "rules", ["rules"] = "rules"
     };
     public string Root { get; }
 
@@ -49,9 +50,9 @@ public sealed class ContentStore
     public static string CanonicalType(string type) => DirectoryFor(type) switch
     {
         "items" => "item", "skills" => "skill", "characters" => "character", "encounters" => "encounter",
-        "buildings" => "building", "recipes" => "recipe", "layouts" => "layout", "scenarios" => "scenario", _ => throw new ArgumentException("Unknown content type.")
+        "buildings" => "building", "recipes" => "recipe", "layouts" => "layout", "scenarios" => "scenario", "trials" => "trial", "rules" => "rule", _ => throw new ArgumentException("Unknown content type.")
     };
-    public static string[] EntityTypes => new[] { "item", "skill", "character", "encounter", "building", "recipe", "layout", "scenario" };
+    public static string[] EntityTypes => new[] { "item", "skill", "character", "encounter", "trial", "rule", "building", "recipe", "layout", "scenario" };
 
     public string EntityPath(string type, string id)
     {

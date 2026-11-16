@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/encounter.schema.json",
+  "title": "P2 encounter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "enemies",
+    "draft"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      }
+    },
+    "notes": {
+      "description": "Helper-only metadata; export removes it."
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "enemies": {
+      "type": "array",
+      "items": {
+        "$ref": "combat-common.schema.json#/$defs/slot"
+      }
+    },
+    "experiencePool": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "publicCash": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "publicDrops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "itemId",
+          "quantity"
+        ],
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      }
+    },
+    "actionOverrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionId",
+          "fields",
+          "remove"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "fields": {
+            "$ref": "combat-common.schema.json#/$defs/actionFields"
+          },
+          "remove": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "displayName",
+                "effectKind",
+                "magnitude",
+                "mpCost",
+                "baseWait",
+                "statusId",
+                "statusKind",
+                "statusMagnitude",
+                "statusDuration",
+                "targetMode",
+                "isMagic",
+                "damageType"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

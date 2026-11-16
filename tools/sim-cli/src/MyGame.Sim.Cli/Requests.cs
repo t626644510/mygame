@@ -59,7 +59,7 @@ public sealed class RequestStore
         if (!Kinds.Contains(Text("kind"))) Error("kind", "Invalid kind: " + Text("kind"));
         if (!Owners.Contains(Text("owner"))) Error("owner", "Invalid owner: " + Text("owner"));
         if (!Statuses.Contains(Text("status"))) Error("status", "Invalid status: " + Text("status"));
-        if (!Regex.IsMatch(Text("target"), "^(global|(item|skill|character|encounter|building|recipe|layout|scenario):[a-z][a-z0-9_-]*)$", RegexOptions.CultureInvariant))
+        if (!Regex.IsMatch(Text("target"), "^(global|(item|skill|character|encounter|trial|rule|building|recipe|layout|scenario):[a-z][a-z0-9_-]*)$", RegexOptions.CultureInvariant))
             Error("target", "target must be global or <type>:<id>.");
         if (string.IsNullOrWhiteSpace(Text("title"))) Error("title", "title must not be empty.");
         string date = Text("createdAt");

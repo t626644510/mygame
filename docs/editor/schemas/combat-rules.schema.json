@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/combat-rules.schema.json",
+  "title": "P2 combat-rules",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "maxUnitsPerTeam",
+    "gridRows",
+    "gridColumns",
+    "capacity"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "notes": {
+      "description": "Helper-only metadata; export removes it."
+    },
+    "maxUnitsPerTeam": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6
+    },
+    "gridRows": {
+      "const": 3
+    },
+    "gridColumns": {
+      "const": 3
+    },
+    "alliesIncludeSelf": {
+      "type": "boolean"
+    },
+    "maxEvents": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "maxWait": {
+      "type": "number",
+      "minimum": 0
+    },
+    "capacity": {
+      "$ref": "combat-common.schema.json#/$defs/capacity"
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}
