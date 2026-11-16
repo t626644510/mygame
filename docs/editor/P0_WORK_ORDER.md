@@ -28,8 +28,8 @@
 | 子任务 | 负责 | 允许写入的路径 |
 | --- | --- | --- |
 | P0-A sim-cli 与内容骨架 | 工程 Agent | `tools/sim-cli/**`、`content/**`、`docs/editor/schemas/**`、`docs/editor/P0_VERIFICATION.md` |
-| P0-B 公开对比方法 | 战斗专项 Agent | `Game/Assets/Prototype/Combat/Runtime/CombatSampleRuns.cs`，以及战斗模块 `Tests/EditMode/` 下新增用例 |
-| P0-C Unity JSON 往返检查 | 工程会话（Windows + Unity 6000.3.28f1） | 新增 `Game/Assets/Prototype/Editor/SimCliRoundTrip/**`（自带 Editor-only asmdef），不改现有文件 |
+| P0-B 公开对比方法 | 战斗专项 Agent | 仅在 `Game/Assets/Prototype/Combat/Runtime/CombatSampleRuns.cs` 中新增第 5 节的公开对比方法；在 `Game/Assets/Prototype/Combat/Tests/EditMode/` 下新增对应用例及其 `.meta`，不改现有测试文件 |
+| P0-C Unity JSON 往返检查 | 工程会话（Windows + Unity 6000.3.28f1） | 仅新增 `Game/Assets/Prototype/Editor/SimCliRoundTrip/**`（自带 Editor-only asmdef，含新增文件的 `.meta`）及目录对应的 `Game/Assets/Prototype/Editor/SimCliRoundTrip.meta`，不改现有文件 |
 
 P0-A 在 P0-B 合入前，`compare` 命令可以先返回 `501 not implemented`；其余命令不依赖 P0-B。
 
@@ -100,7 +100,7 @@ tools/sim-cli/
 ```
 
 - **一个 asmdef 对应一个 csproj**，引用关系与 asmdef 完全一致。这样 Unity 里跨模块访问不到的 internal 成员，在这里也访问不到。
-- Runtime 的四个 csproj 用 `<Compile Include="../../../../Game/Assets/Prototype/<模块>/Runtime/**/*.cs" />` 链接源码。**禁止复制或改写任何 Runtime 源文件。**
+- Runtime 的四个 csproj 用 `<Compile Include="../../../../Game/Assets/Prototype/<模块>/Runtime/**/*.cs" />` 链接源码。**P0-A 禁止复制或改写任何 Runtime 源文件。**
 - Runtime 的四个 csproj：`TargetFramework=netstandard2.1`、`LangVersion=9.0`、`Nullable=disable`、`ImplicitUsings=disable`、`TreatWarningsAsErrors=true`。这样 Unity 6 不支持的 API 或语法会在这里先报错。
 - CLI 项目：`net8.0`，只依赖 BCL，不引入第三方 NuGet 包。HTTP 用 `System.Net.HttpListener` 或 ASP.NET Core Minimal API 均可，二选一，在 README 说明理由。
 - 同时支持 macOS 和 Windows。所有路径用 `Path.Combine`，输出统一用 LF。
@@ -181,7 +181,7 @@ HTTP 返回的 JSON 必须与同名 CLI 命令的输出逐字节一致（同一�
 | # | 项 | 通过条件 |
 | --- | --- | --- |
 | A1 | 构建 | `dotnet build tools/sim-cli -c Release` 在 macOS 和 Windows 都 0 警告 0 错误；Runtime 项目确为 netstandard2.1 / C# 9 |
-| A2 | 不复制、不改源码 | `tools/sim-cli` 下没有 Runtime 的 .cs 副本；除 P0-B 指定文件外，`git diff main -- Game/` 为空 |
+| A2 | 不复制、现有行为不变 | `tools/sim-cli` 下没有 Runtime 的 .cs 副本；`git diff main -- Game/` 仅可包含第 3 节明列的 P0-B 与 P0-C 路径及变更：P0-B 新增公开对比方法和对应用例，P0-C 新增独立 Editor 检查，含各自对应的 `.meta`。其余现有 `Game/` 文件不变；现有 Runtime 方法签名、行为和第二到第四轮报告输出保持不变 |
 | A3 | 目录一致 | `catalog` 前十项与 `CombatTacticsCatalog.Get*()` 序列化后逐项相同；数量为条件 37、选择方式 24、效果 7、状态 9、对象范围 3、作用范围 4 |
 | A4 | 运行结果 | 对 19 份配置跑 `run-combat` / `run-expedition`，结果、结束 WAIT、行动数与第 4 节表格一致；如有不同，先写清原因再判定 |
 | A5 | 报告一致 | `selftest round4 --out a/` 与 `pwsh GenerateRound4Reports.ps1 -OutputDirectory b/` 的 10 个 `ROUND4_*_REPORT.{json,md}` 逐文件 SHA-256 相同 |
