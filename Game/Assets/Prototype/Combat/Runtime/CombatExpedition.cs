@@ -90,6 +90,7 @@ namespace Prototype.Combat
     {
         private readonly CombatExpeditionConfig config;
         private readonly List<CombatEncounterReport> records = new List<CombatEncounterReport>();
+        private readonly List<string> encounterLogTexts = new List<string>();
         private CombatSnapshot previous;
         private bool finished;
         private string stopReason = string.Empty;
@@ -145,7 +146,9 @@ namespace Prototype.Combat
                 publicCash = victory ? encounter.publicCash : 0,
                 publicDrops = victory ? CopyLoot(encounter.publicDrops) : Array.Empty<CombatLootStack>()
             };
+            string logText = battle.ExportLogText();
             records.Add(record);
+            encounterLogTexts.Add(logText);
             previous = CombatSession.CopySnapshot(run.snapshot);
             if (!victory)
             {
@@ -164,6 +167,16 @@ namespace Prototype.Combat
         {
             while (!finished) RunNextEncounter();
             return GetReport();
+        }
+
+        /// <summary>Returns the cached native log for a recorded encounter (1-based).</summary>
+        public string ExportEncounterLogText(int encounterIndex)
+        {
+            if (encounterIndex < 1 || encounterIndex > config.encounters.Length)
+                throw new ArgumentOutOfRangeException(nameof(encounterIndex));
+            if (encounterIndex > records.Count)
+                throw new InvalidOperationException("The encounter has not been executed.");
+            return encounterLogTexts[encounterIndex - 1];
         }
 
         public CombatExpeditionReport GetReport()

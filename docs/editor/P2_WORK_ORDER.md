@@ -35,7 +35,7 @@ User 能在编辑器里完成以下工作：
 - 六维 → HP / MP / 敏捷系数公式。等战斗专项交付，见 [SPECIALIST_REQUESTS.md](SPECIALIST_REQUESTS.md) R1。
 - 全局技能库进入运行时（R2）。本期由组装器把技能拷进战例。
 - 装备强化等级参与组装。本期只取装备的基础 `combatBonus`。
-- 改动任何 Runtime 行为或旧配置。
+- 改动任何 Runtime 行为或旧配置。本期唯一源码例外为下述联场只读日志观察接口；不改变结算、旧 DTO 或旧报告。
 
 ## 3. 分工与文件负责人
 
@@ -43,6 +43,7 @@ User 能在编辑器里完成以下工作：
 | --- | --- | --- |
 | P2-A sim-cli 增量、导入旧战例产生的内容 | 工程 Agent | `tools/sim-cli/**`、`content/{skills,characters,encounters,trials,rules}/**`、`docs/editor/schemas/**` |
 | P2-B 战斗模块界面 | 前端 Agent | `tools/editor-web/**` |
+| P2-C 原会话联场日志观察 | 战斗 owner（根指定） | 仅 `Combat/Runtime/CombatExpedition.cs` 的私有原文缓存/只读 `ExportEncounterLogText(int encounterIndex)`，新增 `Combat/Tests/EditMode/CombatExpeditionLogTests.cs` 及其 `.meta`；工程仅消费接口，不并写 |
 
 ## 4. 数据格式
 
@@ -139,7 +140,7 @@ User 能在编辑器里完成以下工作：
 - `encounters` 只有 1 项时组装为 `CombatScenario`；多于 1 项时组装为 `CombatExpeditionConfig`。
 - 多场时，第一场的 `waitBefore` 必须为 0。
 
-### 4.5 规则参数 `content/rules/combat_rules.json`
+### 4.5 规则参数 `content/rules/rules_combat.json`
 
 ```json
 {
@@ -182,7 +183,7 @@ User 能在编辑器里完成以下工作：
 5. 场景级字段：
    - `id`、`title`、`parameterNotice`、`seed` 取自试炼。
    - `randomUsed` 固定 `false`。
-   - 其余取自 `combat_rules.json`。
+   - 其余取自 `rules_combat.json`。
 6. 校验：每队人数不超过上限；同队格子不重复；行列在范围内；`unitId` 全场唯一。
 
 ### 4.7 旧战例导入
@@ -209,7 +210,7 @@ User 能在编辑器里完成以下工作：
 | --- | --- |
 | `assemble <trialId>` / `POST /api/assemble` | body 可以是试炼 ID，也可以是未保存的试炼、角色、技能覆盖集 `{trial, overrides:{characters:[], skills:[], encounters:[]}}`；返回组装好的 JSON，或返回错误列表 |
 | `POST /api/character/validate` | body `{character, overrides}`：sim-cli 把该角色和一个内置假人（满血、无指令）组成 1 对 1 战例，返回该角色的 `instructionCapacity`、`conditionTermCapacity` 和逐条 `{capacityAllowed, actionAvailable, validationReason, display}`，全部取自 `CombatSession.GetSnapshot()`。字段语义沿用 C#：例如 MP 不足不算不可用 |
-| `POST /api/trial/run` | body 同 assemble；单场返回 `CombatRunResult`，多场返回 `CombatExpeditionReport`；另附 `logText`（`ExportLogText()` 原文；多场则逐场拼接） |
+| `POST /api/trial/run` | body 同 assemble；单场返回 `CombatRunResult`，多场返回 `CombatExpeditionReport`；另附 `logText`。多场保留同一次 `CombatExpeditionSession`，按已执行 report.encounterIndex（从1起）调用只读 `ExportEncounterLogText` 取原内部会话原文；不重跑、不反射、不仿写日志 |
 | `POST /api/trial/compare` | body `{baseline, variant}`，两者都是 assemble 的 body；内部组装后调用 `CompareScenarios`。多场时只比较第一场，并在返回里注明 |
 | `import-scenario` / `import-expedition` | 见 4.7 |
 | `refs <id>` | 扩展到技能、角色、遭遇：技能被谁的白名单 / 指令引用、角色被哪些试炼 / 遭遇引用，旧战例只读扫描 |
@@ -240,7 +241,7 @@ User 能在编辑器里完成以下工作：
 - 六维数值输入框。目前只有智力影响战斗，其余五项显示虚线边框和提示“尚未接入战斗”。
 - `combatOverride` 三项旁标注“手填 · 等公式”。
 - 指令槽进度条显示“已用 / 容量 · 条件项上限”，数值来自 `/api/character/validate`。
-- 悬停容量时提示解锁规则，例如“智力 20 解锁第 2 项条件，40 解锁第 3 项”。文案读 `combat_rules.json`。
+- 悬停容量时提示解锁规则，例如“智力 20 解锁第 2 项条件，40 解锁第 3 项”。文案读 `rules_combat.json`。
 
 **白名单**
 
@@ -312,7 +313,7 @@ User 能在编辑器里完成以下工作：
 | # | 项 | 通过条件 |
 | --- | --- | --- |
 | C1 | 单场往返 | 17 份单场战例（`default.json`、`round2_*`、`round3_*`、`round4_*`，不含出征）逐个 `import-scenario` → `assemble` → 运行：`ExportLogText()` 与直接运行原文件完全相同 |
-| C2 | 出征往返 | `round2_expedition.json`、`round4_expedition.json` 经 `import-expedition` → 组装 → 运行：逐场日志与直接运行原文件相同 |
+| C2 | 出征往返 | `round2_expedition.json`、`round4_expedition.json` 经 `import-expedition` → 组装 → 运行：双方逐场日志分别从本次真实 expedition 的 `ExportEncounterLogText` 缓存直取并相同；新增观察接口须证明重复读取/逐场与批量调度不影响报告、carry、预算、奖励和旧报文。未执行场读取明确异常，不返回假空日志 |
 | C3 | 技能复用 | 先导入 `round4_mage_library.json`，再导入 `round4_area.json`：同 ID 且等价的技能被复用，不产生重复文件；人为改动一个技能后再导入，导入报错且不覆盖 |
 | C4 | 改序对比 | 在导入的 `round2_ambush` 试炼里，于界面中把 mage 第 2 条指令拖到第 1 条：对比卡显示的第一处分歧与 `ComparePriority(round2_ambush)` 的 `firstDivergence` 一致（序号、双方 actionId、targetId、WAIT） |
 | C5 | 容量提示 | 把导入的 `round4_mage_library` 法师智力改为 10：超容量分隔线出现在第 2 条之后；各行提示文字与直接调用 `CombatSession.GetSnapshot()` 的 `validationReason` 完全相同 |

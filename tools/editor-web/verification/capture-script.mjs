@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 import { spawn } from 'node:child_process'
 
 const [script, out, ...args] = process.argv.slice(2)
-if (!['capture-ui', 'browser-smoke', 'offline-smoke'].includes(script) || !out) throw Error('Usage: node verification/capture-script.mjs capture-ui|browser-smoke|offline-smoke <new-raw-log-directory> <script-arguments...>')
+if (!['capture-ui', 'browser-smoke', 'offline-smoke', 'capture-combat-ui', 'measure-combat-run'].includes(script) || !out) throw Error('Usage: node verification/capture-script.mjs <supported-script> <new-raw-log-directory> <script-arguments...>')
 const root = path.resolve(out)
 await fs.mkdir(path.dirname(root), {recursive: true}); await fs.mkdir(root, {recursive: false})
 const commandArgs = [path.resolve('verification', `${script}.mjs`), ...args]

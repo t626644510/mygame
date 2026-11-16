@@ -66,6 +66,11 @@ jobs:
           $repository = Split-Path -Parent (Split-Path -Parent $PWD.Path)
           node verification/Invoke-P1Checks.mjs --output (Join-Path $repository 'outputs/p1-ci') --work (Join-Path $repository 'work/p1-ci') --dotnet (Get-Command dotnet).Source --cli (Join-Path $PWD.Path 'src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll') --pwsh (Get-Process -Id $PID).Path
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify P2 source round trips and atomic import conflicts
+        run: |
+          $repository = Split-Path -Parent (Split-Path -Parent $PWD.Path)
+          node verification/Invoke-P2Checks.mjs --output (Join-Path $repository 'outputs/helper_editor_p2/verification/ci') --work (Join-Path $repository 'work/p2_verification_20261116/ci') --dotnet (Get-Command dotnet).Source --cli (Join-Path $PWD.Path 'src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll') --formal-evidence (Join-Path $env:RUNNER_TEMP 'sim-cli-p0')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Preserve build logs and acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,5 +85,13 @@ jobs:
         with:
           name: helper-editor-p1-${{ matrix.os }}-${{ github.run_attempt }}
           path: outputs/p1-ci
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Preserve P2 raw kernel comparisons and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helper-editor-p2-${{ matrix.os }}-${{ github.run_attempt }}
+          path: outputs/helper_editor_p2/verification/ci
           if-no-files-found: warn
           retention-days: 30

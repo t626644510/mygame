@@ -1,0 +1,5 @@
+import type {Provenance, RuleContext} from './types'
+
+export function SourceSummary({provenance, contexts}: {provenance?: Provenance; contexts: RuleContext[]}) {
+ return <details className="combat-source" open><summary>来源与实际规则</summary>{provenance && <div><span className="badge">{provenance.imported ? '导入来源 · 保留未编辑字段' : '新建配置'}</span><code>{provenance.sourceName || '无导入来源'}</code>{provenance.sourceSha256 && <small className="mono">SHA {provenance.sourceSha256}</small>}</div>}{contexts.map(context => <div className="source-context" key={`${context.trialId}:${context.encounterIndex}`}><strong>第 {context.encounterIndex} 场 · {context.rulesId}</strong><code>{context.sourceScenarioId || '新建运行 ID'}</code><span>{context.origin === 'source' ? '来源绑定规则' : context.origin === 'global' ? '新建全局模板' : '明确内联规则'}{context.sourceName ? ` · ${context.sourceName}` : ''}</span><details><summary>查看该场规则原值（只读）</summary><pre>{JSON.stringify(context.rules, null, 2)}</pre></details></div>)}{!contexts.length && <p className="field-hint">尚未解析规则上下文；不会默用新全局默认覆盖导入来源。</p>}<p className="field-hint">打开与显示不写入默认。缺省、0、false 和空集合分别保留；源场景预算与运行调用预算分开。</p></details>
+}

@@ -23,13 +23,33 @@ public static class ContentExport
             items.Add(item);
         }
         if (errors.Count != 0) throw new ContentValidationException(new(false, errors.ToArray(), Array.Empty<string>()));
-        string itemText = UnityJson.Serialize(new JsonObject { ["schemaVersion"] = 1, ["items"] = items });
-        string sha = Hash(UnityJson.Utf8.GetBytes(itemText));
-        var files = new[] { new { path = "items.json", sha256 = sha, count = items.Count } };
-        string contentHash = Hash(UnityJson.Utf8.GetBytes("items.json\n" + sha + "\n"));
+        var generated = new SortedDictionary<string, (string Text, int Count)>(StringComparer.Ordinal)
+        { ["items.json"] = (UnityJson.Serialize(new JsonObject { ["schemaVersion"] = 1, ["items"] = items }), items.Count) };
+        foreach (string type in new[] { "skill", "character", "encounter" })
+        {
+            // P1-only content roots keep their original one-table manifest bytes.
+            if (!project.Documents.Values.Any(d => d.Type == type)) continue;
+            var values = new JsonArray();
+            foreach (EntityDocument doc in project.Documents.Values.Where(d => d.Type == type && !ContentProject.Flag(d.Value["draft"])).OrderBy(d => ContentProject.Text(d.Value["id"]), StringComparer.Ordinal))
+            {
+                foreach (ReferenceOccurrence reference in ReferenceIndex.CombatWalk(doc.Value, "", type, ContentProject.Text(doc.Value["id"]), doc.Path, false).Concat(ReferenceIndex.Walk(doc.Value, "", type, ContentProject.Text(doc.Value["id"]), doc.Path, false)))
+                {
+                    IdLookup target = project.Lookup(reference.Id);
+                    if (target.exists && ContentProject.Flag(project.Documents[target.path].Value["draft"])) errors.Add(ContentProject.Error(doc.Path, reference.Reference.jsonPointer, "draft_dependency", "有效定义依赖不会导出的草稿：" + target.canonicalId));
+                }
+                JsonObject value = type == "skill" ? CombatContent.RuntimeAction(doc.Value) : (JsonObject)doc.Value.DeepClone();
+                StripEditorFields(value); values.Add(value);
+            }
+            string plural = ContentStore.DirectoryFor(type);
+            generated[plural + ".json"] = (UnityJson.Serialize(new JsonObject { ["schemaVersion"] = 1, [plural] = values }), values.Count);
+        }
+        if (errors.Count != 0) throw new ContentValidationException(new(false, errors.ToArray(), Array.Empty<string>()));
+        var files = generated.Select(pair => new { path = pair.Key, sha256 = Hash(UnityJson.Utf8.GetBytes(pair.Value.Text)), count = pair.Value.Count }).ToArray();
+        string contentHash = Hash(UnityJson.Utf8.GetBytes(string.Concat(files.Select(file => file.path + "\n" + file.sha256 + "\n"))));
         string manifest = UnityJson.Serialize(new { schemaVersion = 1, contentHash, files });
         var destination = new ContentStore(output);
-        var writes = new Dictionary<string, string?>(StringComparer.Ordinal) { ["items.json"] = itemText, ["manifest.json"] = manifest };
+        var writes = generated.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.Text, StringComparer.Ordinal);
+        writes["manifest.json"] = manifest;
         string previousManifest = destination.Resolve("manifest.json");
         if (File.Exists(previousManifest))
         {

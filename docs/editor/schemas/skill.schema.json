@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/skill.schema.json",
+  "title": "P2 skill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "effectKind",
+    "magnitude",
+    "mpCost",
+    "baseWait",
+    "draft"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      }
+    },
+    "notes": {
+      "description": "Helper-only metadata; export removes it."
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "displayName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "effectKind": {
+      "type": "string"
+    },
+    "magnitude": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "mpCost": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "baseWait": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "statusId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "statusKind": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "statusMagnitude": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "statusDuration": {
+      "type": "number",
+      "minimum": 0
+    },
+    "targetMode": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "isMagic": {
+      "type": "boolean"
+    },
+    "damageType": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "classTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

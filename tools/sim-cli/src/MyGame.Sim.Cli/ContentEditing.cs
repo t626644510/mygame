@@ -49,14 +49,13 @@ public static class ContentEditing
         var createdRequests = new List<JsonObject>();
         ContentProject prospective = project.With(relative, ContentStore.CanonicalType(type), entity);
         if (compound && body["requests"] is not JsonArray) throw new ArgumentException("Compound保存的requests必须是数组。");
-        if (compound && ContentStore.CanonicalType(type) != "item") throw new ArgumentException("P1 compound保存只用于物品。");
         if (compound)
         {
             int number = project.NextRequestNumber();
             foreach (JsonNode? raw in (JsonArray)body["requests"]!)
             {
                 if (raw is not JsonObject draft) throw new ArgumentException("需求草稿必须是对象。");
-                JsonObject request = ContentProject.CompleteRequest(draft, id, number++);
+                JsonObject request = ContentProject.CompleteRequest(draft, id, number++, ContentStore.CanonicalType(type));
                 string path = "_requests/" + ContentProject.Text(request["id"]) + ".json";
                 prospective = prospective.With(path, "request", request);
                 writes[path] = UnityJson.Serialize(request);
@@ -65,6 +64,8 @@ public static class ContentEditing
         }
         ContentValidation validation = prospective.Validate();
         if (!validation.ok) throw new ContentValidationException(validation);
+        if (CombatContent.Types.Contains(ContentStore.CanonicalType(type)))
+            CombatImport.TrackEdits(project, ContentStore.CanonicalType(type), id, entity, compound ? body["editIntent"] : null, writes);
         if (createdRequests.Count != 0) writes["REQUESTS.md"] = RequestStore.FormatMarkdown(prospective.Requests());
         // Recheck after validation so an ordinary external edit while validation ran becomes a conflict.
         Preconditions(file, ifMatch, ifNoneMatch);
@@ -77,10 +78,11 @@ public static class ContentEditing
     {
         if (request.status != "open") throw new ArgumentException("新需求只能为open，分拣权属于策划或User。");
         if (!RequestStore.ValidDate(request.createdAt)) throw new ArgumentException("createdAt必须为空或真实yyyy-MM-dd日期。");
-        if (request.target.StartsWith("item:", StringComparison.Ordinal))
+        int separator = request.target.IndexOf(':');
+        if (separator > 0 && ContentStore.EntityTypes.Contains(request.target[..separator]))
         {
-            IdLookup lookup = project.Lookup(request.target[5..]);
-            if (lookup.exists) request.target = "item:" + lookup.canonicalId;
+            IdLookup lookup = project.Lookup(request.target[(separator + 1)..]);
+            if (lookup.exists) request.target = lookup.type + ":" + lookup.canonicalId;
         }
         request.id = "REQ-" + project.NextRequestNumber().ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
         JsonObject raw = (JsonObject)JsonNode.Parse(UnityJson.Serialize(request))!;

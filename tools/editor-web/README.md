@@ -1,6 +1,6 @@
-# Helper：本地内容编辑器（P1）
+# Helper：本地内容与战斗编辑器
 
-本期开放物品定义、来源 / 用途反查、备注与需求、批量粘贴和运行时导出。战斗 P2、地图 / 生产 P3 入口保持禁用。界面只编辑数据；规则由现有 C# Runtime 与 sim-cli 执行。
+开放物品定义，以及 P2 的技能、角色、遭遇和试炼场。规则参数按 P2 工单只读展示；地图 / 生产 P3 入口保持禁用。界面只编辑和展示数据；校验与战斗结果来自现有 C# Runtime 与 sim-cli。服务需支持 [P2 API 合同](../../docs/editor/P2_API_CONTRACT.md)，接口未接通时显示真实错误，不用模拟结果替代。
 
 ## 启动顺序
 
@@ -84,5 +84,22 @@ npm.cmd run test:browser -- http://127.0.0.1:5176 ../../work/my-test/content ../
 ## 实现入口
 
 `src/api.ts` 对应 [固定 API 合同](../../docs/editor/P1_API_CONTRACT.md)，`src/store.ts` 保存当前编辑会话，`src/components/` 包含可复用表格、字段、对话框、需求、粘贴与冲突视图。React 18 / TypeScript strict / Vite、Tailwind 3、Zustand、TanStack Table + Virtual；本地 shadcn 风格按钮与 Radix Dialog、Lucide 图标。参考：[shadcn Dialog](https://ui.shadcn.com/docs/components/radix/dialog)、[TanStack Virtual](https://tanstack.com/virtual/latest/docs/framework/react/react-virtual)。
+
+## P2 战斗编辑
+
+从左侧“战斗”进入技能、角色、遭遇、试炼场；规则页只读。各页未保存修改保留在内存，Ctrl / Cmd+S 保存当前实体，关闭页面前仍会提示未保存修改。字段错误保持服务端原文；已有实体 ID 锁定，409 使用磁盘 / 保留我的仍遵守精确 ETag。
+
+- “导入旧战例”读取本地 JSON 文本并原子导入。来源原文件不修改；上传文本 SHA 明确不等于未上传的文件字节证明。同 ID 不等价导入拒绝，不能用前缀把原动作 ID 自动改名。
+- 角色指令从上往下尝试；拖动柄支持鼠标，也可按空格拾起、方向键移动、空格确认、Esc取消。操作菜单另有上移 / 下移。目录来自核心，条件比例显示百分比而存0–1，三项混合条件明确保存连接符与括号。核心显示与逐条 validationReason 原文可展开查看；超槽行保留，不截断。
+- 角色预览必须选择唯一的试炼 / 场次规则来源。容量、已接通状态来自真实核心；actionAvailable不表示当前MP或目标条件满足。只有智力接入战斗，其他五维和 combatOverride 不由前端补公式。
+- 遭遇的角色可拖到网格，或先选择模板再点击空格。槽位0、false、空状态表与缺省分别保留；新建才采用-1满值 / 装备推导哨兵。装备只用已有基础伤害加值，不投影强化等级。
+- 普通技能页编辑共享定义。遭遇的“本场技能覆盖”分别显示共享、本场操作、核心实际值：继承当前共享、固定本场值、或省略Runtime字段三态互斥。删除本场固定值后继承当前共享，不能让原来源值复活。原动作ID保持不变。
+- 试炼运行取当前相关候选，对比的基线严格从磁盘读取；多场比较明确仅限首场。单步和步骤选择只切换已返回记录，不重复请求战斗。时间轴 / 步骤 / attempts / candidates 的原因与效果均显示核心返回值；“跳到这条指令”使用明确绑定，不按ID前缀猜角色。
+- 来源卡区分原运行ID和Helper实体ID，显示实际绑定规则、来源与预算。打开表单不补写默认，全局规则模板不覆盖已导入场景。联场逐场头字段只读；场景预算与调用预算分开。
+- 角色 JSON 下载为 Helper 模板；“导出为战例”使用已保存的试炼并写到后端固定 `_exports/<trialId>.json`。草稿和缺能力依赖由服务端硬阻，合法草稿仍可从全库导出集合中剔除。
+
+战斗实现位于 `src/features/combat/`；通用指令拖排位于 `src/components/rules/RuleList.tsx`。拖排使用精确锁定的 dnd-kit core6.3.1 / sortable10.0.0 / utilities3.2.2，沿用 [官方 sortable](https://dndkit.com/legacy/presets/sortable/overview/) 与 [keyboard sensor](https://dndkit.com/legacy/api-documentation/sensors/keyboard/) 接口；未升级React、Vite、PostCSS或ESLint链。当前依赖审计仍需保留原有TS-eslint / minimatch条件风险及ESLint9支持边界，不能把构建成功称为零漏洞。
+
+P2的真实截图、性能与交互验收以独立 `P2_VERIFICATION.md` 及对应原件为准；开发中的页面与本README不构成验收通过声明。
 
 正文复用仓库已跟踪的 Noto Sans CJK 字体，代码与数值使用本地 `@fontsource/jetbrains-mono`，不依赖远端字体服务。Noto 的原始许可与来源见 `Game/Assets/Prototype/Art/Fonts/OFL.txt`、`SOURCE.txt` 和仓库 `THIRD_PARTY_NOTICES.md`；依赖的许可随各 npm 包保留。开发服务器仅精确允许编辑器根与该 OTF 文件，生产构建将字体打包为普通 `/assets/` URL，并随资产保留同源 `NotoSansCJKsc-OFL.txt` / `NotoSansCJKsc-SOURCE.txt`。

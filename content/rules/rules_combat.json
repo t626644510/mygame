@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "rules_combat",
+  "maxUnitsPerTeam": 6,
+  "gridRows": 3,
+  "gridColumns": 3,
+  "alliesIncludeSelf": true,
+  "maxEvents": 3000,
+  "maxWait": 20000,
+  "capacity": {
+    "baseSlots": 1,
+    "slotsPerIntelligence": 0.1,
+    "minimumSlots": 1,
+    "maximumSlots": 6,
+    "secondConditionAtIntelligence": 20,
+    "thirdConditionAtIntelligence": 40
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/t626644510/mygame/blob/main/docs/editor/schemas/character.schema.json",
+  "title": "P2 character",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "attributes",
+    "combatOverride",
+    "draft"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      }
+    },
+    "notes": {
+      "description": "Helper-only metadata; export removes it."
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tags": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "attributes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "strength"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "constitution"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "intelligence"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "spirit"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "agility"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "const": "focus"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        }
+      ],
+      "items": false
+    },
+    "combatOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxHp",
+        "maxMp",
+        "agilityFactor"
+      ],
+      "properties": {
+        "maxHp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "maxMp": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "agilityFactor": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "availableActionIds": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "availableActionIdsExplicit": {
+      "type": "boolean"
+    },
+    "instructions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "combat-common.schema.json#/$defs/instruction"
+      }
+    },
+    "defaultEquipment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot",
+          "itemId"
+        ],
+        "properties": {
+          "slot": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        }
+      }
+    }
+  },
+  "$comment": "C# additionally enforces global ID/alias and filename uniqueness, real catalog/ranges, reference resolution, atomic requests, source binding/presence and actual Runtime legality. Helper metadata is not sent to Runtime."
+}

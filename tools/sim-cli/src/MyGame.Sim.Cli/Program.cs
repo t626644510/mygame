@@ -15,7 +15,7 @@ public static class Program
         {
             if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
             {
-                Console.Write("sim-cli: catalog | validate | refs | legacy-scan | export | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
+                Console.Write("sim-cli: catalog | validate | refs | legacy-scan | export | import-scenario | import-expedition | assemble | run-trial | export-scenario | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
                 return args.Length == 0 ? 2 : 0;
             }
             var options = new Options(args.Skip(1).ToArray());
@@ -25,6 +25,30 @@ public static class Program
             int exitCode = 0;
             switch (args[0])
             {
+                case "import-scenario":
+                case "import-expedition":
+                    options.Check(1, "content", "prefix", "out");
+                    byte[] sourceBytes = File.ReadAllBytes(options.Positionals[0]);
+                    result = CombatImport.Import(ContentProject.Load(new ContentStore(content), repository), File.ReadAllText(options.Positionals[0]), Path.GetFileName(options.Positionals[0]), args[0] == "import-expedition", options.Has("prefix") ? options.Get("prefix") : null, CombatImport.Hash(sourceBytes));
+                    break;
+                case "assemble":
+                    options.Check(1, "content", "out");
+                    result = CombatAssembly.Build(ContentProject.Load(new ContentStore(content), repository), new JsonObject { ["trialId"] = options.Positionals[0] }).config;
+                    break;
+                case "run-trial":
+                    options.Check(1, "content", "out", "log");
+                    result = CombatRuns.Run(ContentProject.Load(new ContentStore(content), repository), new JsonObject { ["trialId"] = options.Positionals[0] });
+                    if (options.Has("log"))
+                    {
+                        JsonObject runEnvelope = (JsonObject)JsonNode.Parse(UnityJson.Serialize(result))!;
+                        string logFile = Path.GetFullPath(options.Get("log")); Directory.CreateDirectory(Path.GetDirectoryName(logFile)!);
+                        File.WriteAllBytes(logFile, UnityJson.Utf8.GetBytes(CombatContent.Text(runEnvelope["logText"])));
+                    }
+                    break;
+                case "export-scenario":
+                    options.Check(1, "content", "out");
+                    result = CombatRuns.ExportScenario(ContentProject.Load(new ContentStore(content), repository), options.Positionals[0], options.Require("out"));
+                    Console.Write(UnityJson.Serialize(result)); return 0;
                 case "catalog":
                     options.Check(0, "out"); result = Simulation.Catalog(); break;
                 case "validate":
