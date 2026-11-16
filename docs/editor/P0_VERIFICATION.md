@@ -1,6 +1,6 @@
 # P0 工程验收记录
 
-状态：**实现已联通，验收进行中；P0 尚未完成。** 固定源码基线 `1706cbb353856b5b6f20c492268e3382a899a6b4`。本文由工程集成负责人维护，不修改权威上下文或其摘要，不延伸到 P1、R1/R2/R3/R5/P4。
+状态：**A1–A12 已具工程实证（A6 保留诊断限定），冻结候选待根独立复核；P0 尚未获阶段放行。** 固定源码基线 `1706cbb353856b5b6f20c492268e3382a899a6b4`；实际已测代码提交 `66d2a46440da715b10b6f85d497dd0b4b31c2ebe`。Draft PR未合并，不启动P1。本文由工程集成负责人维护，不修改权威上下文或其摘要，不延伸到 R1/R2/R3/R5/P4。
 
 本轮用户明确要求 A1 两个平台正式工程实证、A6 Windows Unity 实证。施工单中旧的 `git diff main` 以本轮授权的固定 `1706cbb` 替代；A6 可延后的旧句不作为本轮跳过验收的依据。源码提交、纯 .NET 通过、Unity 通过与用户玩法验收分别记录。
 
@@ -34,17 +34,17 @@ git -c safe.directory=C:/Users/lau/Documents/ChatGPT/mygame diff 1706cbb353856b5
 
 | 项 | 当前状态 | 命令与真实结果/证据 |
 | --- | --- | --- |
-| A1 | Windows 通过；macOS 未验 | 正式五工程 `build . -c Release -warnaserror --no-incremental -m:1`：exit0、0 Warning、0 Error；`formal-build.stdout/.stderr/.command.json/.binlog`。双平台 CI尚未触发，main提交/推送被自动审批阻止 |
+| A1 | Windows/macOS均通过 | 真实标准runner首轮run43816836863，两OS SDK8.0.428、actual/expected Git HEAD均66d2a464；正式五工程 `build . -c Release -warnaserror --no-incremental -m:1` 均exit0、0 Warning、0 Error。`ci/43816836863/{windows,macos}/formal-build.stdout/.stderr/.command.json/.binlog` |
 | A2 | 固定基线源码检查通过；最终提交映射待做 | Runtime 全为直接 Compile Link，无 Runtime `.cs` 副本。24个Runtime/asmdef文件中23个相同，唯一现有文件变化是P0-B纯新增22行；Game新增为B测试/meta2个和C9个，StreamingAssets零变更。根独立审查已复核允许范围；不能用移动main空diff证明 |
 | A3 | 通过 | 真实 `catalog` 对10个原Runtime Get* 序列化逐项比较；数量37/24/7/9/3/4。`pure/verification.json` 和 `commands/001-catalog.stdout` |
 | A4 | 通过 | 17战例结果/WAIT/行动数全部与工单表相同；2出征 CompletedAllEncounters、各2场；`pure/run-results.json`。出征观察到的最终 WAIT 单独列为实测，不补写成工单旧基准 |
-| A5 | Windows 通过；macOS待同平台对照 | 10/10 CLI selftest = 未改脚本新目录输出 = 冻结Windows本机旧10报告；`report-hash-comparison.json`。raw旧哈希来自独立审计，不是1706 Git blob；mac换行派生哈希明确另存，不归一化原档 |
+| A5 | 两平台同平台对照均通过 | Win10/10 CLI=未改脚本=冻结Windows旧档；Mac10/10 CLI=同平台未改脚本，5 JSON为LF，与Windows旧档CRLF raw不同，LF派生hash一致；5 Markdown两平台一致。两平台 `report-hash-comparison.json`。原档未归一化/重写，不声称跨平台JSON raw字节一致 |
 | A6 | 通过（限所要求的一致性；保留未解释诊断） | 真实Windows Unity6000.3.28f1 batchmode/nographics：19配置、21日志对全部相同，完整报告一致；Combat EditMode258/258，新增16/16 XML Passed。独立审查重算42日志文件和19完整JSON通过；两批实际exit0，但有mono abort/debugger-agent/allocator尾诊断，不能称干净退出 |
-| A7 | 通过 | INT10每条capacityAllowed/validationReason与直接GetSnapshot相同；重复角色ID exit1且error/stderr保持原ArgumentException消息 |
+| A7 | 通过 | INT10每条capacityAllowed/validationReason与直接GetSnapshot相同；重复角色ID exit1且error/stderr保持原ArgumentException消息。run8替代旧5条stderr瑕疵；两OS CI各80个原始流的物理hash80/80匹配 |
 | A8 | 通过（正式直接方法调用） | `CompareScenarios` 与 `ComparePriority(round2_ambush)` 的firstDivergence序列化相同；onlyDeclaredSettingChanged=false。已删除临时reflection/501 fallback |
 | A9 | 通过 | 三样例schema有效，owner/status排序及done/rejected折叠；kind非法、ID重复、target错误同次报出exit1；创建ID、空日期/非法日期另验 |
 | A10 | 通过 | 真实系统TCP表仅127.0.0.1；三种raw路径穿越400；PUT/GET字节一致，非法PUT422保留原件；catalog/run/validate/expedition/compare与CLI字节一致；CORS、创建需求、DELETE实测 |
-| A11 | 通过 | run-combat/compare两次真实CLI输出逐字节相同；requests两次生成Markdown逐字节相同。普通产品输出不读墙钟；明确输入日期只作内容元数据 |
+| A11 | 两平台各自通过 | run-combat/compare两次真实CLI输出逐字节相同；requests两次生成Markdown逐字节相同。普通产品输出不读墙钟；明确输入日期只作内容元数据。两OS各106项完整验收通过 |
 | A12 | 通过 | [sim-cli README](../../tools/sim-cli/README.md) 有Windows/mac安装、构建、所有命令、错误码/HTTP与特例说明；[content README](../../content/README.md) 有目录、ID、样例边界 |
 
 ## 首次失败及修正
@@ -55,6 +55,28 @@ git -c safe.directory=C:/Users/lau/Documents/ChatGPT/mygame diff 1706cbb353856b5
 4. 同次首次报告比较发现5 JSON因普通LF归一化与原脚本CRLF不同，5 Markdown相同；未改Runtime/配置/旧档。报告写出改为原脚本特例，正式run4新目录10/10 SHA相同。首次新输出保留在 `dotnet-run3-normal/reports-cli/`。
 5. HTTP补证辅助记录：run5的完整TCP响应曾经过文本LF helper，不能当完整原始TCP字节；run6已改直接保存byte[]，但PS5 Start-Process的ExitCode返回null，未当作可用退出码原件。run7用PS7 ProcessStartInfo准确捕获0退出，正文/TCP字节直接保存。旧补证目录全部保留；这些辅助脚手架问题不改产品逻辑。
 6. 独立复核发现run4旧采集器5个stderr文件/hash不一致，原因和替代证据已在上文明确；不是产品错误返回被修改。采集器修为原始byte流；只build验证器0警告0错误并运行5错误路径，新10流hash全部匹配。普通产品JSON/LF规范保持不变。
+7. 新精确human授权后，分支commit/push/Draft PR创建成功；发布脚本末尾只读 `gh pr view --head` 参数错误导致脚本exit1。已用编号3查询确认Draft/head/reviewer正确，未重复创建PR或重复推送。首轮远端CI失败数为0。本地证据下载helper另有Task.WhenAll重载歧义，修正后下载原始zip并验证API digest；这些不是远端构建/验收失败。
+
+## 正式双平台CI与候选映射
+
+[Draft PR #3](https://github.com/t626644510/mygame/pull/3)，head为 `codex/helper-editor-p0`，base为main，`isDraft=true`，外部reviewRequests为空。取得新的原始human精确授权后正常创建/提交/推送；此前两次拒绝与零执行回执按历史保留，不改写成从未被拒。main始终停在1706基线，未merge或启动下一期。
+
+首轮 [run43816836863](https://github.com/t626644510/mygame/actions/runs/43816836863)：Windows job133130696084、macOS job133130696369真实完成。artifact的 `source-commit.stdout`、`environment.json`、SDK原件、build stdout/exit/binlog均已下载核对；不是只接受API绿色。
+
+| 平台 | 实际环境 | 实际Git HEAD / SDK | 构建与验收 |
+| --- | --- | --- | --- |
+| windows-latest | Microsoft Windows10.0.26100 / X64 | `66d2a46440da715b10b6f85d497dd0b4b31c2ebe` / 8.0.428 | build exit0，0 Warning/0 Error；106项、40次CLI、80原始流hash一致、10报告同平台一致 |
+| macos-latest | macOS26.7.2 / Arm64 | 同一 `66d2a46440da715b10b6f85d497dd0b4b31c2ebe` / 8.0.428 | build exit0，0 Warning/0 Error；106项、40次CLI、80原始流hash一致、10报告同平台一致 |
+
+PR事件 `githubEventSha=48b15af648ac5e2fc07985184dce67a28c4799b0` 是synthetic merge，不作为已测代码提交。实际checkout与expectedSourceCommit均为66d2a464。源码/规则/CI实现的已测身份固定为此commit；本次收尾仅更新本文，最终候选commit及其与66d2的docs-only差异会另存本地 `P0_FINAL_FREEZE.json`，不把旧CI冒充新源码的测试。最终PR head/checks与外部冻结清单一起交根独立审查；不为说明性收尾再运行Unity。
+
+持久原件根：`outputs/p0_20261116/ci/43816836863/`。`logs.zip`与展开日志覆盖两job和各step；`windows/`、`macos/`分别含完整SDK/build/binlog/MSBuild项目属性/CLI原始流/HTTP原始字节/19结果/报告哈希。核对摘要 `CI_ARTIFACT_VERIFICATION.json` SHA-256 `354fb9ccf1104868495491bf13f1c2ecc2766cadd65827248aa6607432543cfc`。
+
+| 原始下载 | SHA-256（artifact与GitHub API digest匹配） |
+| --- | --- |
+| `logs.zip` | `f87d6bd926d59f7a1188555aef0904472949384cd562d94e1f040daa67c2da5c` |
+| `windows.zip` | `62e8ad970e44b8aaf42cb570ceb9308b7d5c6d09a0265d5bbfff4ca650b782f2` |
+| `macos.zip` | `848aab459ad469e375a95e0edf180a646c1d760c0114e407aab8becae85f22b7` |
 
 ## 真实Unity执行与诊断边界
 
@@ -81,8 +103,4 @@ git -c safe.directory=C:/Users/lau/Documents/ChatGPT/mygame diff 1706cbb353856b5
 
 P0-B原专项自报16纯C#探针/37报告/509保护清单的部分原始临时日志已不可访问，只能恢复摘要，不作为本会话正式可复核验收。其历史边界说明见 `outputs/helper_editor_p0/p0b_evidence_20261116_063363f9/MINIMAL_RECEIPT.md`。当前直接公开入口、19配置、10报告均已在持久目录重新实跑；新增16参数化测试已由本轮真实Unity XML核对，未抄纯C#探针冒充Editor结果。
 
-macOS正式工程CI、最终冻结Git SHA与阶段独立审查尚未完成；Unity尾诊断保留为未解释限制。首次main commit/push工具调用在执行前被自动审批拒绝，理由为“可信用户内容未明确授权此次精确的main提交/推送目标”；没有执行提交或推送，不拆分/换通道绕过。原main提案/patch保留在 `outputs/p0_20261116/P0_COMMIT_PUSH_PROPOSAL.md` 与 `staged-p0.patch`，不作为当前新方案身份。HEAD仍为1706基线。
-
-新方案是向全新 `codex/helper-editor-p0` 功能分支正常提交/推送，并建立无外部reviewer的Draft PR取双平台CI，不更新main或合并PR。具体可审目标与新patch见 `outputs/p0_20261116/P0_BRANCH_CI_PROPOSAL.md`。本段为执行前准备快照：同名分支已只读确认不存在，根已明确“本地可送跨平台CI”；执行前再查分支存在性并接受正常自动审批，存在或被拒即停，不覆盖、换工具/身份绕过。送CI许可不等于P0通过。
-
-候选workflow的feature分支push不会匹配push-main条件，Draft PR的opened/synchronize/reopened事件才运行一套Windows/macOS矩阵，没有draft跳过条件。显式checkout `github.event.pull_request.head.sha`，保存实际Git HEAD、expected head、事件SHA、SDK和平台，并拒绝checkout不符；PR事件的synthetic merge SHA不能冒充已验证的功能分支提交。普通Player退出崩溃未修复；不启动普通Player、不接触Unity窗口UIAutomation，C/Opus保持暂停。
+当前尚待最终冻结候选的独立审查与根明确阶段放行。main仍1706，不merge/P1。Unity尾诊断保留为未解释限制，普通Player退出崩溃未修复；不启动普通Player、不接触Unity窗口UIAutomation，C/Opus保持暂停。原main提案/拒绝、新分支初次拒绝、精确human授权及恢复预检均留在outputs历史记录，不当作当前CI结果。workflow没有Draft跳过条件，且显式核actual HEAD，最终交付将以真实branch commit/checks为准。
