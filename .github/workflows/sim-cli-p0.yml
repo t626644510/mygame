@@ -1,0 +1,63 @@
+name: sim-cli P0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/sim-cli/**'
+      - 'content/**'
+      - 'docs/editor/**'
+      - 'Game/Assets/Prototype/Combat/**'
+      - 'Game/Assets/Prototype/BaseEconomy/Runtime/**'
+      - 'Game/Assets/Prototype/Tactics/Runtime/**'
+      - 'Game/Assets/Prototype/Expedition/Runtime/**'
+      - '.github/workflows/sim-cli-p0.yml'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tools/sim-cli/**'
+      - 'content/**'
+      - 'docs/editor/**'
+      - 'Game/Assets/Prototype/Combat/**'
+      - 'Game/Assets/Prototype/BaseEconomy/Runtime/**'
+      - 'Game/Assets/Prototype/Tactics/Runtime/**'
+      - 'Game/Assets/Prototype/Expedition/Runtime/**'
+      - '.github/workflows/sim-cli-p0.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      P0_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: tools/sim-cli
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.428'
+      - name: Build formal projects and verify actual CLI outputs
+        run: ./verification/Invoke-P0Checks.ps1 -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sim-cli-p0')
+      - name: Preserve build logs and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-cli-p0-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sim-cli-p0
+          if-no-files-found: error
+          retention-days: 30

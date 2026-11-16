@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "REQ-0001",
+  "kind": "new_effect",
+  "owner": "combat",
+  "target": "global",
+  "title": "咏唱型技能（P0 样例）",
+  "body": "仅演示需求单格式；咏唱规则尚未实现，等待策划另行确认与授权。",
+  "status": "open",
+  "createdAt": "2026-11-15"
+}

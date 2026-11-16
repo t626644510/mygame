@@ -1,0 +1,14 @@
+{
+  "name": "Prototype.Editor.SimCliRoundTrip",
+  "rootNamespace": "Prototype.Editor.SimCliRoundTrip",
+  "references": ["Prototype.Combat"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

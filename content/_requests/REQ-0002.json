@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "REQ-0002",
+  "kind": "new_building_function",
+  "owner": "base",
+  "target": "global",
+  "title": "寻路支持障碍格（P0 样例）",
+  "body": "triaged 仅为工单指定的静态样例状态，不代表总策划已分拣真实需求，不授权执行。",
+  "status": "triaged",
+  "createdAt": "2026-11-15"
+}

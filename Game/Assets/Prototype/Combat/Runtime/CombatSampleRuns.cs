@@ -37,6 +37,28 @@ namespace Prototype.Combat
     /// </summary>
     public static class CombatSampleRuns
     {
+        public static CombatComparisonReport CompareScenarios(
+            CombatScenario baseline, CombatScenario variant,
+            string baselineLabel = "baseline", string variantLabel = "variant",
+            string changedSetting = "")
+        {
+            var baselineSession = new CombatSession(baseline);
+            var variantSession = new CombatSession(variant);
+            CombatScenario baselineConfig = baselineSession.GetScenario();
+            CombatScenario variantConfig = variantSession.GetScenario();
+            CombatRunResult baselineRun = baselineSession.RunToCompletion();
+            CombatRunResult variantRun = variantSession.RunToCompletion();
+            CombatFirstDivergence difference = FirstDivergence(baselineRun.steps, variantRun.steps);
+            return new CombatComparisonReport
+            {
+                id = baseline.id + ":compare", baselineLabel = baselineLabel, variantLabel = variantLabel,
+                changedSetting = changedSetting, onlyDeclaredSettingChanged = false,
+                baselineConfiguration = baselineConfig, variantConfiguration = variantConfig,
+                baseline = baselineRun, variant = variantRun, firstDivergence = difference,
+                observableImpact = Impact(baselineRun, variantRun, baselineConfig, variantConfig, difference)
+            };
+        }
+
         public static CombatComparisonReport ComparePriority(CombatScenario source, string unitId = "mage",
             int fromIndex = 1, int toIndex = 0)
         {
