@@ -34,7 +34,7 @@ export function CombatWorkspace() {
  }, [current, currentKey, online])
  useEffect(() => {
   void useCombatStore.getState().load()
-  const route = () => {const [, typeName, encodedId] = location.hash.replace(/^#\/?/, '').split('/'); if (!combatTypes.includes(typeName as CombatType)) {combatNavigate('skill', undefined, true); return} const id = encodedId ? decodeURIComponent(encodedId) : undefined; const store = useCombatStore.getState(); if (id === '_new') {if (store.current !== `${typeName}:_new`) store.create(typeName as CombatType)} else if (id) void store.open(typeName as CombatType, id); else useCombatStore.setState({type: typeName as CombatType, current: '', errors: []})}
+  const route = () => {const [moduleName, typeName, encodedId] = location.hash.replace(/^#\/?/, '').split('/'); if (moduleName !== 'combat') return; if (!combatTypes.includes(typeName as CombatType)) {combatNavigate('skill', undefined, true); return} const id = encodedId ? decodeURIComponent(encodedId) : undefined; const store = useCombatStore.getState(); if (id === '_new') {if (store.current !== `${typeName}:_new`) store.create(typeName as CombatType)} else if (id) void store.open(typeName as CombatType, id); else useCombatStore.setState({type: typeName as CombatType, current: '', errors: []})}
   route(); window.addEventListener('hashchange', route); window.addEventListener('popstate', route)
   return () => {window.removeEventListener('hashchange', route); window.removeEventListener('popstate', route)}
  }, [])

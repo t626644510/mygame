@@ -71,7 +71,7 @@ public sealed class ContentProject
             Text(doc.Value["kind"]) is not "" and not "note";
     });
 
-    public ContentValidation Validate()
+    public ContentValidation Validate(bool includeBaseDiagnostics = false)
     {
         var errors = new List<ContentError>(LoadErrors);
         var pool = new Dictionary<string, (string Path, string Field)>(StringComparer.Ordinal);
@@ -112,7 +112,8 @@ public sealed class ContentProject
                 }
             else if (value["aliases"] is not null) errors.Add(Error(doc.Path, "/aliases", "type", "aliases必须是字符串数组。"));
             if (doc.Type == "item") errors.AddRange(ItemValidation.Validate(doc, this));
-            if (CombatContent.Types.Contains(doc.Type)) errors.AddRange(CombatContent.Validate(doc, this));
+            if (CombatContent.Types.Contains(doc.Type) && !BaseContent.IsFlowRule(doc.Type, id)) errors.AddRange(CombatContent.Validate(doc, this));
+            if (BaseContent.IsDocument(doc)) errors.AddRange(BaseContent.Validate(doc, this));
 
             void Add(string name, string field)
             {
@@ -122,7 +123,12 @@ public sealed class ContentProject
                 else pool[name] = (doc.Path, field);
             }
         }
-        return new(errors.Count == 0, errors.ToArray(), Array.Empty<string>());
+        string[] warnings = Array.Empty<string>();
+        if (includeBaseDiagnostics && errors.Count == 0)
+        {
+            var diagnostics = BaseLayouts.ValidateAll(this); errors.AddRange(diagnostics.Errors); warnings = diagnostics.Warnings;
+        }
+        return new(errors.Count == 0, errors.ToArray(), warnings);
     }
 
     public ContentValidation ValidateItem(JsonObject entity, string mode, IEnumerable<JsonObject>? requestDrafts = null)

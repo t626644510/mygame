@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "rcp_simple_meal",
+  "name": "简餐",
+  "inputs": [
+    {
+      "itemId": "mat_grain",
+      "quantity": 1
+    }
+  ],
+  "outputs": [
+    {
+      "itemId": "con_simple_meal",
+      "quantity": 1
+    }
+  ],
+  "workTicks": 3,
+  "workerTags": [
+    "cook"
+  ],
+  "draft": false,
+  "notes": "读取旧首餐grainPerMeal/productionTicks，仅静态配方，不接入新居民或通用生产运行时。"
+}

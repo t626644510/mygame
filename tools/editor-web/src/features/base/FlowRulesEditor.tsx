@@ -1,0 +1,13 @@
+import {Plus, Trash2} from 'lucide-react'
+import {Button} from '../../components/ui/button'
+import {ItemSelect} from './Fields'
+import {useBaseStore} from './store'
+import type {FlowEntry, FlowRules} from './types'
+
+const sourceKinds = {starting: '开局持有', resident_sale: '居民出售', external_market: '外部市场', gathering: '采集'}
+const sinkKinds = {resident_need: '居民需求', external_sale: '外部销售'}
+export function FlowRulesEditor({rules}: {rules: FlowRules}) {
+ const edit = useBaseStore(s => s.edit)
+ const change = (kind: 'sources' | 'sinks', entries: FlowEntry[]) => edit(entity => {(entity as FlowRules)[kind] = entries})
+ return <div className="base-form-scroll"><div className="base-flow-intro"><h2>链外来源与去处</h2><p>只登记明确设计的链外流向。配方、实际掉落、强化消耗与建筑造价由分析器计入，无需重复填表。</p><code>content/rules/rules_base_item_flows.json → base_item_flows.json</code></div>{(['sources', 'sinks'] as const).map(kind => {const entries = rules[kind], options = kind === 'sources' ? sourceKinds : sinkKinds, label = kind === 'sources' ? '来源' : '去处'; return <section className="base-card" key={kind} data-field={kind}><div className="base-section-title"><h2>{label}</h2><Button size="sm" onClick={() => change(kind, [...entries, {itemId: '', kind: Object.keys(options)[0], note: ''}])}><Plus size={13} />添加{label}</Button></div><div className="base-flow-table">{entries.length > 0 && <div className="base-flow-head"><span>物品</span><span>类型</span><span>说明（导出剔除）</span><span /></div>}{entries.map((entry, index) => <div className="base-flow-row" key={index}><div data-field={`${kind}.${index}.itemId`}><ItemSelect label={`${label}${index + 1}物品`} value={entry.itemId} onChange={itemId => change(kind, entries.map((entry, i) => i === index ? {...entry, itemId} : entry))} /></div><select data-field={`${kind}.${index}.kind`} aria-label={`${label}${index + 1}类型`} value={entry.kind} onChange={e => change(kind, entries.map((entry, i) => i === index ? {...entry, kind: e.target.value} : entry))}>{!Object.hasOwn(options, entry.kind) && <option value={entry.kind}>{entry.kind}</option>}{Object.entries(options).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><input data-field={`${kind}.${index}.note`} aria-label={`${label}${index + 1}说明`} value={entry.note ?? ''} onChange={e => change(kind, entries.map((entry, i) => i === index ? {...entry, note: e.target.value} : entry))} /><Button variant="ghost" size="icon" aria-label={`删除${label}${index + 1}`} onClick={() => change(kind, entries.filter((_, i) => i !== index))}><Trash2 size={14} /></Button></div>)}{!entries.length && <p className="field-hint">暂无显式{label}。</p>}</div></section>})}</div>
+}

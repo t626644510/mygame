@@ -71,6 +71,29 @@ jobs:
           $repository = Split-Path -Parent (Split-Path -Parent $PWD.Path)
           node verification/Invoke-P2Checks.mjs --output (Join-Path $repository 'outputs/helper_editor_p2/verification/ci') --work (Join-Path $repository 'work/p2_verification_20261116/ci') --dotnet (Get-Command dotnet).Source --cli (Join-Path $PWD.Path 'src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll') --formal-evidence (Join-Path $env:RUNNER_TEMP 'sim-cli-p0')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify P3 static layouts and production analysis
+        run: |
+          $repository = Split-Path -Parent (Split-Path -Parent $PWD.Path)
+          $output = Join-Path $repository 'outputs/helper_editor_p3/verification/ci'
+          $work = Join-Path $repository 'work/p3_verification_20261117/ci'
+          New-Item -ItemType Directory -Force $output, $work | Out-Null
+          $dotnet = (Get-Command dotnet).Source
+          $node = (Get-Command node).Source
+          $cli = Join-Path $PWD.Path 'src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll'
+          $cliHash = (Get-FileHash -LiteralPath $cli -Algorithm SHA256).Hash.ToLowerInvariant()
+          $contractHash = (Get-FileHash -LiteralPath (Join-Path $repository 'docs/editor/P3_API_CONTRACT.md') -Algorithm SHA256).Hash.ToLowerInvariant()
+          $head = (& git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($head -cne $env:P0_EXPECTED_COMMIT) { throw 'P3 checkout HEAD differs from the expected PR head.' }
+          $sdk = (& $dotnet --version).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $nodeVersion = (& $node --version).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [ordered]@{ actualHead=$head; expectedHead=$env:P0_EXPECTED_COMMIT; platform=$PSVersionTable.OS; sdk=$sdk; node=$nodeVersion; dotnet=$dotnet; cli=$cli; cliSha256=$cliHash; contractSha256=$contractHash; formalBuildEvidence=(Join-Path $env:RUNNER_TEMP 'sim-cli-p0') } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'CI_IDENTITY.json') -Encoding utf8
+          & $node (Join-Path $repository 'tools/editor-verification/p3/first-meal-check.mjs') --dotnet $dotnet --output (Join-Path $output 'oracle') --work (Join-Path $work 'oracle')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $node (Join-Path $repository 'tools/editor-verification/p3/backend-checks.mjs') --dotnet $dotnet --cli $cli --expected-cli-sha $cliHash --contract-sha $contractHash --first-meal-baseline (Join-Path $output 'oracle/FIRST_MEAL_BASELINE.json') --output (Join-Path $output 'backend') --work (Join-Path $work 'backend') --pwsh (Get-Process -Id $PID).Path --only 'D2,D3,D4,D5,D8'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Preserve build logs and acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,5 +116,13 @@ jobs:
         with:
           name: helper-editor-p2-${{ matrix.os }}-${{ github.run_attempt }}
           path: outputs/helper_editor_p2/verification/ci
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Preserve P3 raw layout and production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helper-editor-p3-${{ matrix.os }}-${{ github.run_attempt }}
+          path: outputs/helper_editor_p3/verification/ci
           if-no-files-found: warn
           retention-days: 30

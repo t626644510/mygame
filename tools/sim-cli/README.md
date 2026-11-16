@@ -164,3 +164,52 @@ dotnet $cli export-scenario trial_round4_mage_library --content work/example/con
 `export` 保留 P1 合法 draft 物品剔除、其他有效项可出的语义；有 P2 内容时增加 skills/characters/encounters 表。实际 active 依赖 draft/未支持能力会阻止运行和导出，并保目标目录不变。trials、来源及编辑 metadata 不导出。新表不代表已实现 R2 全局库 Runtime 消费，也不引入 R1 六维派生、R3 新装备或 P3。
 
 27 个法师动作的实际句子与原字段、来源指纹见 [P2_SKILL_SENTENCES.md](../../docs/editor/P2_SKILL_SENTENCES.md)。CI 的 `verification/Invoke-P2Checks.mjs` 消费前序正式构建，调用独立原核 oracle 核对 C1 的17单场、C2的2联场及C3的4项复用/拒绝；它只覆盖同平台纯 .NET/Node，界面、HTTP及唯一受控Unity证据分别验收。
+
+## P3 建筑、地图与静态配方链
+
+**建筑与配方目前只做设计和静态检查，游戏运行时尚未接入。** 已知的 storage/housing/shop/public_service/decoration 与 workshop 都是合法静态设计，不因尚未接入通用运行时而被强制设为 draft。只有未知功能使用 pending+draft，并附 owner=base、kind=new_building_function 的需求。旧 BaseSession、首餐与备战行为不变，不引入居民决策、账本推演或沙盘。
+
+完整字段、ETag、错误层次和 HTTP DTO 见 [P3_API_CONTRACT.md](../../docs/editor/P3_API_CONTRACT.md)。源规则文件是 `content/rules/rules_base_item_flows.json`、ID 为 `rules_base_item_flows`，保持 filename=id；导出产物仍叫 `base_item_flows.json`。
+
+从前文已构建的 `$dotnet` / `$sim` 开始，在仓库根准备新的隔离副本：
+
+```powershell
+if (Test-Path work/p3-example) { throw '请选择新的隔离目录，保留现有编辑。' }
+New-Item -ItemType Directory work/p3-example | Out-Null
+Copy-Item -LiteralPath content -Destination work/p3-example/content -Recurse
+& $dotnet $sim import-first-meal --content work/p3-example/content
+& $dotnet $sim layout-check layout_first_meal_near --content work/p3-example/content
+& $dotnet $sim layout-check layout_first_meal_far --content work/p3-example/content
+& $dotnet $sim analyze-chain --content work/p3-example/content --out work/p3-example/chain.json
+& $dotnet $sim validate --content work/p3-example/content
+& $dotnet $sim export --content work/p3-example/content --out work/p3-example/runtime
+& $dotnet $sim serve --content work/p3-example/content --export-out work/p3-example/runtime --port 5185
+```
+
+macOS 使用前文同一参数的 `$dotnet` 可执行文件；命令入口均不依赖 Unity。网页在“地图”模块选择近/远首餐布局，在“生产”选择简餐/链图/物品流规则。服务只监听127.0.0.1。已有另一服务时使用独立端口和数据根，遵守实际 PID/启动身份，不按旧端口终止其它任务。
+
+需要留在网页中浏览的完整样例时，可用准备入口代替手工复制；它只接受仓库 `work/` 下**尚不存在**的新目录，连已有空目录也拒绝，不启动服务、不删除或覆盖旧目录：
+
+```powershell
+node tools/sim-cli/scripts/prepare-p3-review.mjs --preset clean --out work/p3-review-clean-001
+node tools/sim-cli/scripts/prepare-p3-review.mjs --preset layout-errors --out work/p3-review-errors-001
+node tools/sim-cli/scripts/prepare-p3-review.mjs --preset chain --out work/p3-review-chain-001
+```
+
+每次准备都复制当前 canonical `content/`，打印实际 content/runtime 根、各样例 ID/网页地址和现有 serve/前端命令，并保存 `P3_REVIEW_PRESET.json`。默认命令使用当前源码的 Release DLL；本机独立构建可加 `--dotnet <可执行文件> --cli <sim-cli.dll>`，端口可加 `--port 5185 --ui-port 5175`。先按前文构建，随后分别执行打印出的后端和前端命令；Ctrl+C 停止各自服务。
+
+`clean` 是合法近/远首餐与简餐库，可以导出；`layout-errors` 复用独验五个 active 布局与所需建筑定义，故意保留五类设计错误供问题定位，其导出应失败；`chain` 复用五种非阻断提示配方并补测试物品定义，可以导出。链样例把无来源、无去处物品与循环配方的物品分开，避免组合后提示互相抵消；这些隔离样例不写回正式定义，不是新增玩法。准备入口只读复用 `tools/editor-verification/p3/fixtures.mjs`，不运行验收或复制寻路算法。恢复相同开局时，停自己的服务，换一个新目录再次准备 `clean` 并使用其根路径重启；不要把导入或已有目录当强制重置。
+
+`import-first-meal` 固定读取旧 `BaseEconomy/default.json`，创建/等价复用 `bld_legacy_kitchen`、`rcp_simple_meal`、`layout_first_meal_near/far`，不覆盖不同内容同ID、不改名。要重新回到未改起点，请选择新的隔离根复制正式合法 content；不要把重复导入当强制重置。legacy 厨房是1×1可通行点，入口0,0；它是旧预置设施，导入建设价0仅未知成本的静态占位，不表示免费建设。简餐引用现有 mat_grain/con_simple_meal，参考价6/10，工时3，静态单位工时增值1.3333，不是最终经济平衡。
+
+布局结构有效时，五类非法摆放仍可 PUT 保存：越界、占地重叠/压地形、入口堵塞、不连通、实例归属不被定义允许。`POST /api/layout/check {layout}` 返回200及有定位的 errors/warnings；CLI layout-check 有硬错误时 exit1、合法时 exit0。pure validate-entity 只负责结构/引用，不能因此禁保存设计中的空间错误。显式 `validate --content` 与 export 对 active 布局检查这五类错误。默认正式库只有合法 near/far；D3 错误演示在独立副本中保持 draft=false，检查/导出失败后恢复字段或换新副本，不能靠剔除 draft 错误样例冒充通过。
+
+距离接口 `POST /api/layout/distance {layout,from:{instanceId}|{x,y}}` 返回同行主序 distanceField 和各入口/出生点的 tiles/ticks。障碍及不可达=-1；起点越界、堵塞或实例不存在为422，不偷换到0,0。定义只取当前磁盘已保存版本，建筑表单未保存时不隐式覆盖地图。障碍数组来自不可通行地形和不可通行建筑占地；寻路/连通/距离直接调用冻结的 `Prototype.BaseEconomy.BasePathfinding`，没有第二份 BFS。路径包含首尾，步数为非空 path.Length-1；显示格距直接取 DistanceField，不把节点数当距离。
+
+旋转采用屏幕 y 向下、实例左上角不动。对原始宽高(w,h)和局部点(x,y)：0°=(x,y)，90°=(h-1-y,x)，180°=(w-1-x,h-1-y)，270°=(y,w-1-x)；90/270交换宽高，外侧入口使用同一公式。D5 的3×2入口{1,2}旋转90°变为2×3和{-1,1}，即左侧正中；实例只持久化rotation90，不改建筑原定义。
+
+`far_from_storage` 阈值是 `BaseLayouts.FarFromStorageThreshold=12`：工坊到最近可达仓储入口最短路 **大于12格** 才提示。没有仓储时不造该警告；不可达另报 D3 错误。阈值不写入物品流源文件。首餐近/远厨粮距离2/7、客厨3/8；公式 `max(2*d(厨,粮)*movementTicksPerTile+productionTicks,d(客,厨)*movementTicksPerTile)` 推得7/17 tick，不表示旧 BaseSession 已改用新寻路。
+
+链图五 flags（no_source/no_sink/cycle/no_building/non_positive_margin）全部是 warning、blocking=false。缺来源、有意循环、暂时独立的合法配方仍可导出；真正缺失定义、非法字段、active依赖draft/未实现，以及D3布局错误才硬拦。no_building 看有没有建筑定义引用配方，不看布局是否摆工坊。非正参考增值琥珀，其余问题节点红描边。别名归一到现有定义；旧掉落、强化材料和建筑造价计入来源/去处，未知数量保null，实例/source标签不能注册成物品。
+
+P3 数据存在时 export 增加 buildings.json/recipes.json/layouts.json/base_item_flows.json；P1-only根保留原一表manifest语义。输出按ID排序，剔合法draft、notes及flow note，保留设计name/description；提示在 analysisWarnings 与硬错误分开。失败不写目标任何文件，成功只清理上次manifest所管产物，保留其它文件/meta；重复导出全部文件和manifest字节相同，不读墙钟。P3 这四表仍是设计产物，游戏尚无通用建筑/配方加载执行系统。

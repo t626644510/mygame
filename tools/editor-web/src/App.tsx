@@ -16,8 +16,13 @@ import {CombatWorkspace} from './features/combat/CombatWorkspace'
 import {combatNavigate} from './features/combat/routing'
 import {useCombatStore, sessionDirty} from './features/combat/store'
 import {combatTypes, type CombatType} from './features/combat/types'
+import {BaseWorkspace} from './features/base/BaseWorkspace'
+import {baseDirty, useBaseStore} from './features/base/store'
+import {baseNavigate, parseBaseRoute} from './features/base/routing'
+import {flowRuleId, type BaseType} from './features/base/types'
 
 type Destination = string | null
+const isBaseType = (type: string | undefined, id: string) => ['building', 'recipe', 'layout'].includes(type || '') || type === 'rule' && id === flowRuleId
 const currentRoute = () => {
   const value = window.location.hash.replace(/^#\/?/, '').split('/')
   return value[0] === 'items' && value[1] ? decodeURIComponent(value[1]) : null
@@ -43,9 +48,11 @@ function focusField(pointer: string) {
 }
 export function App() {
   const state = useEditorStore()
-  const [module, setModule] = useState<'items' | 'combat'>(() => location.hash.startsWith('#/combat') ? 'combat' : 'items')
+  const [module, setModule] = useState<'items' | 'combat' | 'map' | 'production'>(() => parseBaseRoute()?.module || (location.hash.startsWith('#/combat') ? 'combat' : 'items'))
   const currentItemId = state.current?.item.id
   const combatCurrentId = useCombatStore(s => s.sessions[s.current]?.entity.id)
+  const baseCurrentId = useBaseStore(s => s.sessions[s.current]?.entity.id)
+  const baseHasChanges = useBaseStore(s => Object.values(s.sessions).some(baseDirty))
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('helper-theme')
     return saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
@@ -77,7 +84,7 @@ export function App() {
         const health = await api.health(AbortSignal.timeout(1200))
         if (!active) return
         useEditorStore.getState().setOnline(true, health.version)
-        if (!connected) {void useEditorStore.getState().load(); if (useCombatStore.getState().loaded) void useCombatStore.getState().load()}
+        if (!connected) {void useEditorStore.getState().load(); if (useCombatStore.getState().loaded) void useCombatStore.getState().load(); if (useBaseStore.getState().loaded) void useBaseStore.getState().load()}
         connected = true
       } catch {if (active) useEditorStore.getState().setOnline(false); connected = false}
       finally {busy = false}
@@ -88,17 +95,19 @@ export function App() {
   useEffect(() => {
     if (!state.loaded || initialRoute.current) return
     initialRoute.current = true
+    const base = parseBaseRoute(); if (base) {setModule(base.module); return}
     if (location.hash.startsWith('#/combat')) {setModule('combat'); return}
     performNavigation(currentRoute(), false)
   }, [state.loaded])
   const navigate = useCallback((id: Destination) => {
-    if (id === sessionRoute()) return
+    if (location.hash.startsWith('#/items') && id === sessionRoute()) return
     const action = () => {setModule('items'); performNavigation(id)}
     if (isDirty(useEditorStore.getState().current)) setPendingNav(() => action)
     else action()
   }, [])
   useEffect(() => {
     const onRoute = () => {
+      const base = parseBaseRoute(); if (base) {setModule(base.module); return}
       if (location.hash.startsWith('#/combat')) {setModule('combat'); return}
       setModule('items')
       const requested = currentRoute(); const previous = sessionRoute()
@@ -115,16 +124,16 @@ export function App() {
     const key = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
-        if (!document.querySelector('[role="dialog"]')) {if (module === 'combat') void useCombatStore.getState().save(); else void useEditorStore.getState().save()}
+        if (!document.querySelector('[role="dialog"]')) {if (module === 'combat') void useCombatStore.getState().save(); else if (module === 'map' || module === 'production') void useBaseStore.getState().save(); else void useEditorStore.getState().save()}
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {event.preventDefault(); setSearchOpen(value => !value)}
-      if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) {if (module === 'combat') {const combat = useCombatStore.getState(); if (combat.current) combatNavigate(combat.type)} else if (useEditorStore.getState().current) navigate(null)}
+      if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) {if (module === 'combat') {const combat = useCombatStore.getState(); if (combat.current) combatNavigate(combat.type)} else if (module === 'items' && useEditorStore.getState().current) navigate(null)}
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   }, [navigate, module])
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {if (isDirty(useEditorStore.getState().current) || Object.values(useCombatStore.getState().sessions).some(sessionDirty)) event.preventDefault()}
+    const warn = (event: BeforeUnloadEvent) => {if (isDirty(useEditorStore.getState().current) || Object.values(useCombatStore.getState().sessions).some(sessionDirty) || Object.values(useBaseStore.getState().sessions).some(baseDirty)) event.preventDefault()}
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [])
@@ -134,10 +143,10 @@ export function App() {
     return () => clearTimeout(timer)
   }, [state.toast])
   useEffect(() => {
-    if (!issueFocus || (issueFocus.type && issueFocus.type !== 'item' ? combatCurrentId : currentItemId) !== issueFocus.id) return
+    if (!issueFocus || (isBaseType(issueFocus.type, issueFocus.id) ? baseCurrentId : issueFocus.type && issueFocus.type !== 'item' ? combatCurrentId : currentItemId) !== issueFocus.id) return
     const frame = requestAnimationFrame(() => {if (focusField(issueFocus.field)) setIssueFocus(null)})
     return () => cancelAnimationFrame(frame)
-  }, [issueFocus, currentItemId, combatCurrentId, module])
+  }, [issueFocus, currentItemId, combatCurrentId, baseCurrentId, module])
   const submitRequest = async (request: RequestDraft, capabilityId: string) => {
     if (!composer || !state.current) return
     if (composer.capability) {
@@ -177,19 +186,24 @@ export function App() {
     if (module === 'items' && isDirty(useEditorStore.getState().current)) setPendingNav(() => action)
     else action()
   }
+  const openBase = (type: BaseType | 'chain' = 'layout', id?: string) => {
+    const action = () => {setModule(type === 'building' || type === 'layout' ? 'map' : 'production'); baseNavigate(type, id)}
+    if (module === 'items' && isDirty(useEditorStore.getState().current)) setPendingNav(() => action)
+    else action()
+  }
   return <div className="editor-shell">
     <header className="topbar"><a href="#/items" className="brand" onClick={e => {e.preventDefault(); navigate(null)}}><Box size={19} /><strong>Helper</strong><span>内容编辑器</span></a><Button variant="ghost" className="global-search" onClick={() => setSearchOpen(true)} aria-label="全局搜索"><Search size={14} /><span>搜索 ID、别名、名称</span><kbd>Ctrl K</kbd></Button><div className={`connection ${state.online ? '' : 'offline'}`} title={state.version}>{state.online ? <Wifi size={13} /> : <WifiOff size={13} />}<span>{state.online ? 'sim-cli 已连接' : '未连接'}</span><i /></div><Button variant="ghost" size="sm" onClick={() => setRequestsOpen(true)} aria-label="查看需求单"><MessageSquare size={14} /><span className="top-label">需求单</span><span className="mono">{state.requests.filter(request => !['done', 'rejected'].includes(request.status)).length}</span></Button><Button variant="ghost" size="sm" disabled={!state.online} onClick={() => void state.validate()}><FileCheck2 size={14} /><span className="top-label">{problems.length ? `${problems.length} 个问题` : state.validation?.ok ? '校验通过' : '校验内容'}</span></Button><Button variant="ghost" size="icon" aria-label={theme === 'light' ? '切换暗色主题' : '切换亮色主题'} onClick={() => setTheme(value => {const next = value === 'dark' ? 'light' : 'dark'; localStorage.setItem('helper-theme', next); return next})}>{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</Button></header>
     {!state.online && <div className="offline-banner" role="status"><WifiOff size={14} /><strong>本地模拟器未连接</strong><span>编辑内容保留，恢复后可继续保存。</span><Button size="sm" variant="ghost" onClick={() => {void copyText('dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll serve --content content --port 5185').then(() => state.notify('已复制 sim-cli 启动命令')).catch(() => state.notify('浏览器未允许复制'))}}><ClipboardCopy size={13} />复制启动命令</Button></div>}
-    <div className="workspace"><nav className="module-nav" aria-label="编辑器模块"><button className={module === 'items' ? 'active' : ''} aria-current={module === 'items' ? 'page' : undefined} title="物品" onClick={() => navigate(null)}><Package size={19} /><span>物品</span></button><button className={module === 'combat' ? 'active' : ''} aria-current={module === 'combat' ? 'page' : undefined} title="战斗" onClick={() => openCombat()}><FlaskConical size={18} /><span>战斗</span></button><button disabled title="地图模块 · P3"><Map size={18} /><span>地图</span><small>P3</small></button><button disabled title="生产模块 · P3"><Settings2 size={18} /><span>生产</span><small>P3</small></button><span className="nav-bottom" title="本地编辑器"><Command size={16} /></span></nav>{module === 'combat' ? <CombatWorkspace /> : <main className={`content-area ${state.current ? 'has-detail' : ''}`}><ItemTable onSelect={navigate} onNew={() => navigate('_new')} onPaste={() => setPasteOpen(true)} />{state.current && <ItemDetail onClose={() => navigate(null)} onSave={() => void state.save()} onDelete={() => setDeleteOpen(true)} onRequest={(field, capability) => setComposer({field, capability})} />}</main>}</div>
-    <div className="bottom-status"><button onClick={() => state.showProblems(!state.problemsOpen)}>{problems.length ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}{problems.length ? `${problems.length} 个校验问题` : state.validation?.ok ? '内容校验通过' : '问题面板'}<span>{state.problemsOpen ? '收起' : '展开'}</span></button><span>本地文件 · 一实体一文件</span>{state.items.some(item => item.draft) && <small>导出将排除 {state.items.filter(item => item.draft).length} 个草稿</small>}<Button variant="ghost" size="sm" disabled={!state.online || exporting || isDirty(state.current)} onClick={() => void exportContent()} title={isDirty(state.current) ? '请先保存修改' : '仅导出已保存的可用定义；草稿不包含，活动引用草稿时拒绝导出'}><FileDown size={12} />{exporting ? '导出中…' : '导出可用内容'}</Button></div>
-    {state.problemsOpen && <section className="problems-panel" aria-label="校验问题"><header><h2>校验问题 <span className="mono">{problems.length}</span></h2><Button variant="ghost" size="icon" aria-label="收起问题面板" onClick={() => state.showProblems(false)}><PanelBottomClose size={15} /></Button></header><div>{!problems.length ? <p className="text-muted-foreground">{state.validation?.ok ? '内容校验通过。' : '点击顶部“校验内容”检查已保存的数据。'}</p> : problems.map((error, index) => <button key={`${error.path}-${error.code}-${index}`} onClick={() => {const match = error.path.match(/(items|skills|characters|encounters|trials|rules)\/([a-z][a-z0-9_]*)\.json/); if (match) {const type = match[1].slice(0, -1), id = match[2]; setIssueFocus({id, field: error.field || error.code, type}); if (type === 'item') {if (state.current?.item.id !== id) navigate(id)} else openCombat(type as CombatType, id)}}}><AlertCircle size={13} /><code>{error.path}</code><span>{error.message}</span></button>)}{state.validation?.warnings.map((warning, index) => <p className="text-warning" key={index}>{warning}</p>)}</div></section>}
+    <div className="workspace"><nav className="module-nav" aria-label="编辑器模块"><button className={module === 'items' ? 'active' : ''} aria-current={module === 'items' ? 'page' : undefined} title="物品" onClick={() => navigate(null)}><Package size={19} /><span>物品</span></button><button className={module === 'combat' ? 'active' : ''} aria-current={module === 'combat' ? 'page' : undefined} title="战斗" onClick={() => openCombat()}><FlaskConical size={18} /><span>战斗</span></button><button className={module === 'map' ? 'active' : ''} aria-current={module === 'map' ? 'page' : undefined} title="地图" onClick={() => openBase('layout')}><Map size={18} /><span>地图</span></button><button className={module === 'production' ? 'active' : ''} aria-current={module === 'production' ? 'page' : undefined} title="生产" onClick={() => openBase('chain')}><Settings2 size={18} /><span>生产</span></button><span className="nav-bottom" title="本地编辑器"><Command size={16} /></span></nav>{module === 'combat' ? <CombatWorkspace /> : module === 'map' || module === 'production' ? <BaseWorkspace onItem={id => navigate(id)} /> : <main className={`content-area ${state.current ? 'has-detail' : ''}`}><ItemTable onSelect={navigate} onNew={() => navigate('_new')} onPaste={() => setPasteOpen(true)} />{state.current && <ItemDetail onClose={() => navigate(null)} onSave={() => void state.save()} onDelete={() => setDeleteOpen(true)} onRequest={(field, capability) => setComposer({field, capability})} />}</main>}</div>
+    <div className="bottom-status"><button onClick={() => state.showProblems(!state.problemsOpen)}>{problems.length ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}{problems.length ? `${problems.length} 个校验问题` : state.validation?.ok ? '内容校验通过' : '问题面板'}<span>{state.problemsOpen ? '收起' : '展开'}</span></button><span>本地文件 · 一实体一文件</span>{state.items.some(item => item.draft) && <small>导出将排除 {state.items.filter(item => item.draft).length} 个草稿</small>}<Button variant="ghost" size="sm" disabled={!state.online || exporting || isDirty(state.current) || baseHasChanges} onClick={() => void exportContent()} title={isDirty(state.current) || baseHasChanges ? '请先保存修改' : '仅导出已保存的可用定义；草稿不包含，活动引用草稿时拒绝导出'}><FileDown size={12} />{exporting ? '导出中…' : '导出可用内容'}</Button></div>
+    {state.problemsOpen && <section className="problems-panel" aria-label="校验问题"><header><h2>校验问题 <span className="mono">{problems.length}</span></h2><Button variant="ghost" size="icon" aria-label="收起问题面板" onClick={() => state.showProblems(false)}><PanelBottomClose size={15} /></Button></header><div>{!problems.length ? <p className="text-muted-foreground">{state.validation?.ok ? '内容校验通过。' : '点击顶部“校验内容”检查已保存的数据。'}</p> : problems.map((error, index) => <button key={`${error.path}-${error.code}-${index}`} onClick={() => {const match = error.path.match(/(items|skills|characters|encounters|trials|rules|buildings|recipes|layouts)\/([a-z][a-z0-9_]*)\.json/); if (match) {const type = match[1].slice(0, -1), id = match[2]; setIssueFocus({id, field: error.field || error.code, type}); if (type === 'item') {if (state.current?.item.id !== id) navigate(id)} else if (isBaseType(type, id)) openBase(type as BaseType, id); else openCombat(type as CombatType, id)}}}><AlertCircle size={13} /><code>{error.path}</code><span>{error.message}</span></button>)}{state.validation?.warnings.map((warning, index) => <p className="text-warning" key={index}>{warning}</p>)}</div></section>}
     {state.toast && <div className="toast" role="status"><CheckCircle2 size={15} /><span>{state.toast}</span><button onClick={() => state.notify('')} aria-label="关闭提示"><X size={13} /></button></div>}
     {pasteOpen && <BatchImport onClose={() => setPasteOpen(false)} />}
     {composer && state.current && <RequestForm open onClose={() => setComposer(null)} target={`item:${state.current.item.id}`} field={composer.field} mandatory={!!composer.capability} capability={composer.capability} onSubmit={submitRequest} />}
     <ConflictDialog />
     <Modal open={!!pendingNav} onOpenChange={value => {if (!value) setPendingNav(null)}} title="有未保存的修改" description="离开前请选择保存修改，或放弃当前修改。" footer={<><Button className="mr-auto" onClick={() => setPendingNav(null)}>继续编辑</Button><Button onClick={() => {pendingNav?.(); setPendingNav(null)}}>放弃并离开</Button><Button variant="default" disabled={!state.online || state.saving} onClick={() => {void state.save().then(saved => {if (saved) {pendingNav?.(); setPendingNav(null)}})}}>保存并离开</Button></>}><p>{state.current?.item.name || state.current?.item.id} 的修改仍在内存中。</p></Modal>
     <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="删除物品定义" description="仅无引用的物品可以删除。该操作会删除对应源 JSON 文件。" footer={<><Button onClick={() => setDeleteOpen(false)} disabled={deleting}>取消</Button><Button variant="danger" onClick={() => void deleteCurrent()} disabled={deleting || !state.online}>确认删除</Button></>}><p className="mono">{state.current?.item.id}</p></Modal>
-    <EntitySearch open={searchOpen} onClose={() => setSearchOpen(false)} onSelect={(id, type) => {setSearchOpen(false); if (type && combatTypes.includes(type as CombatType)) openCombat(type as CombatType, id); else navigate(id)}} />
+    <EntitySearch open={searchOpen} onClose={() => setSearchOpen(false)} onSelect={(id, type) => {setSearchOpen(false); if (isBaseType(type, id)) openBase(type as BaseType, id); else if (type && combatTypes.includes(type as CombatType)) openCombat(type as CombatType, id); else navigate(id)}} />
     <Modal open={requestsOpen} onOpenChange={setRequestsOpen} title="备注与需求单" description="状态按源文件显示。样例的 triaged / in_progress 不代表真实任务已派发。" className="requests-modal"><div className="request-list">{state.requests.map(request => <article className="request-entry" key={request.id}><div className="flex items-center gap-2"><code>{request.id}</code><span className="badge">{request.status}</span><span className="text-xs text-muted-foreground">{request.owner}</span></div><h3>{request.title}</h3><p>{request.body}</p><code>{request.target}</code></article>)}{!state.requests.length && <p className="text-muted-foreground">暂无备注与需求。可从物品详情添加。</p>}</div></Modal>
   </div>
 }

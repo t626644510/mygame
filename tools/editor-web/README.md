@@ -1,6 +1,6 @@
-# Helper：本地内容与战斗编辑器
+# Helper：本地内容、战斗与基地设计编辑器
 
-开放物品定义，以及 P2 的技能、角色、遭遇和试炼场。规则参数按 P2 工单只读展示；地图 / 生产 P3 入口保持禁用。界面只编辑和展示数据；校验与战斗结果来自现有 C# Runtime 与 sim-cli。服务需支持 [P2 API 合同](../../docs/editor/P2_API_CONTRACT.md)，接口未接通时显示真实错误，不用模拟结果替代。
+开放物品定义、P2 的技能/角色/遭遇/试炼场，以及 P3 的建筑/布局/配方/物品流与生产链。战斗规则参数按 P2 工单只读展示。**建筑与配方目前只做设计和静态检查，游戏运行时尚未接入。** 校验、距离和战斗结果来自现有 C# Runtime 与 sim-cli；服务需支持 [P2 API 合同](../../docs/editor/P2_API_CONTRACT.md) 与 [P3 API 合同](../../docs/editor/P3_API_CONTRACT.md)，未接通时显示真实错误，不用模拟结果替代。
 
 ## 启动顺序
 
@@ -101,5 +101,31 @@ npm.cmd run test:browser -- http://127.0.0.1:5176 ../../work/my-test/content ../
 战斗实现位于 `src/features/combat/`；通用指令拖排位于 `src/components/rules/RuleList.tsx`。拖排使用精确锁定的 dnd-kit core6.3.1 / sortable10.0.0 / utilities3.2.2，沿用 [官方 sortable](https://dndkit.com/legacy/presets/sortable/overview/) 与 [keyboard sensor](https://dndkit.com/legacy/api-documentation/sensors/keyboard/) 接口；未升级React、Vite、PostCSS或ESLint链。当前依赖审计仍需保留原有TS-eslint / minimatch条件风险及ESLint9支持边界，不能把构建成功称为零漏洞。
 
 P2的真实截图、性能与交互验收以独立 `P2_VERIFICATION.md` 及对应原件为准；开发中的页面与本README不构成验收通过声明。
+
+## P3 地图与生产设计
+
+地图与生产页常驻静态能力说明。工坊、仓储、住宅、商店、公共服务和装饰均可保存为普通设计数据；不因运行时尚未接入而把它们全部标成草稿。只有“其他（未实现）”建筑功能必须为草稿，并附 `base / new_building_function` 需求后原子保存。
+
+| 地址 | 内容 |
+| --- | --- |
+| `#/map/building/<id>` | 建筑表单、拖动右下角调整占地、点击格子设置入口、建设成本与可做配方 |
+| `#/map/layout/<id>` | 原生双层 Canvas 布局、地形笔刷、建筑实例/出生点、真实距离和问题定位 |
+| `#/production/recipe/<id>` | 配方投入/产出/工时/工人标签，以及已保存版本的参考价值分析 |
+| `#/production/chain` | 物品→配方→物品链，问题与相关物品筛选、点击节点打开对应编辑页 |
+| `#/production/flows/rules_base_item_flows` | 链外来源与去处规则表 |
+
+“导入首餐布局”只从后端固定的旧 `BaseEconomy/default.json` 原子生成近/远样例及预置厨房/简餐配方；等价已存在实体复用，不覆盖不等价同ID。源规则文件是 `content/rules/rules_base_item_flows.json`；导出名为 `base_item_flows.json`。旧预置厨房建设值0只是静态占位，不代表免费建设规则。
+
+布局的检查、距离及画布始终使用**已保存的建筑定义**。未保存建筑表单不会隐式改变地图。鼠标滚轮围绕指针缩放（25%–400%），空格+拖动或中键平移；适配窗口遵守相同缩放下限。选建筑后单击放置，Shift连续放置、R顺时针旋转，Esc/右键取消。拖动实例移动，Delete删除；Ctrl/Cmd+Z撤销、Ctrl/Cmd+Shift+Z重做，每个布局会话保留100步。一次连续笔刷或一次拖动在放开指针时形成一步。
+
+屏幕坐标x向右、y向下；90°把 `(w,h)` 变为 `(h,w)`，局部点包括外侧入口一起映射为 `(h−1−y,x)`。3×2建筑入口 `{1,2}` 转90°后是2×3、入口 `{-1,1}`，即左侧正中。建筑原占地不改写，保存实例 `rotation:90`。前端只做几何投影，不复制寻路；距离场来自后端同一 `BasePathfinding`，源点0、障碍/不可达为−1，格数与移动tick分别显示。图例按≤4/5–8/≥9格分段，另有不可达斜纹，亮暗主题各有固定颜色。
+
+越界、重叠、入口堵塞、不可达、归属不允许仍可放下并保存，300ms防抖检查会列出实际问题；点击问题居中定位并闪烁该格。导出前先保存修改，后端对已保存的上述空间错误硬拦，失败不会改变产物。链的no_source、cycle、no_building、no_sink、non_positive_margin均为分析提示，单独出现时仍可导出；no_building检查建筑定义是否引用配方，和布局是否摆了工坊无关。非正增值标琥珀，其他问题节点红框；参考增值基于测试baseValue，不是正式价格或运行时利润。
+
+生产图和配方数值分析对应磁盘已保存数据；未保存修改会明确提示。布局保存、409两选择、断线恢复、字段问题定位与物品/战斗页沿用同一并发保护：GET期间新输入不会被晚响应覆盖，冲突重试始终绑定原实体与精确ETag。
+
+P3存在有效设计时，全局导出新增 `buildings.json`、`recipes.json`、`layouts.json`、`base_item_flows.json`。草稿与备注不进入产物；合法独立草稿可被剔除，不把整个库锁住。字段/真实引用错误、active依赖被剔除草稿，以及五类布局错误仍阻断。未实现居民决策、通用经济推演或P4沙盘。
+
+实现位于 `src/features/base/`。布局没有引入画布库；链图仅使用精确锁定的 `@xyflow/react 12.12.1` 与 `dagre 0.8.5`，依赖与许可由lock/npm包固定，已有React/Vite/PostCSS/ESLint链未升级。P3的实际通过范围以独立 `P3_VERIFICATION.md` 与生产源码绑定的原始截图/性能/网络/磁盘记录为准。
 
 正文复用仓库已跟踪的 Noto Sans CJK 字体，代码与数值使用本地 `@fontsource/jetbrains-mono`，不依赖远端字体服务。Noto 的原始许可与来源见 `Game/Assets/Prototype/Art/Fonts/OFL.txt`、`SOURCE.txt` 和仓库 `THIRD_PARTY_NOTICES.md`；依赖的许可随各 npm 包保留。开发服务器仅精确允许编辑器根与该 OTF 文件，生产构建将字体打包为普通 `/assets/` URL，并随资产保留同源 `NotoSansCJKsc-OFL.txt` / `NotoSansCJKsc-SOURCE.txt`。

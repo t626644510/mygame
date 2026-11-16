@@ -23,6 +23,7 @@ public static class CombatContent
     {
         IdLookup lookup = project.Lookup(id);
         if (!lookup.exists || lookup.type != type) Fail("content", "", "reference_missing", "找不到" + type + "：" + id);
+        if (type == "rule" && BaseContent.IsFlowRule(lookup.type, lookup.canonicalId)) Fail("content", "", "rule_family", "基地物品流规则不能用于战斗。");
         return project.Documents[lookup.path].Value;
     }
     public static void Fail(string path, string field, string code, string message) => throw new ContentValidationException(new(false, new[] { ContentProject.Error(path, field, code, message) }, System.Array.Empty<string>()));
@@ -80,7 +81,11 @@ public static class CombatContent
         void Bool(JsonObject obj, string key, string pointer)
         { if (obj.ContainsKey(key) && (obj[key] is not JsonValue field || !field.TryGetValue<bool>(out _))) Error(pointer + "/" + key, "boolean", "必须是布尔值：" + key); }
         void Ref(string targetType, string target, string pointer)
-        { IdLookup lookup = project.Lookup(target); if (!lookup.exists || lookup.type != targetType) Error(pointer, "reference_missing", "找不到" + targetType + "：" + target); }
+        {
+            IdLookup lookup = project.Lookup(target);
+            if (!lookup.exists || lookup.type != targetType) Error(pointer, "reference_missing", "找不到" + targetType + "：" + target);
+            else if (targetType == "rule" && BaseContent.IsFlowRule(lookup.type, lookup.canonicalId)) Error(pointer, "rule_family", "基地物品流规则不能用于战斗。");
+        }
         void Strings(JsonObject obj, string key, string pointer)
         {
             if (!obj.ContainsKey(key) || obj[key] is null) return;
@@ -92,7 +97,7 @@ public static class CombatContent
             if (obj[key] is not JsonArray slots) { Error("/" + key, "array", "必须是站位数组。"); return; }
             var cells = new HashSet<string>(StringComparer.Ordinal); var ids = new HashSet<string>(StringComparer.Ordinal);
             int max = 6;
-            if (type == "trial" && Text(value["rulesId"]) != "" && project.Lookup(Text(value["rulesId"])) is { exists: true } found) max = Int(project.Documents[found.path].Value["maxUnitsPerTeam"], 6);
+            if (type == "trial" && Text(value["rulesId"]) != "" && project.Lookup(Text(value["rulesId"])) is { exists: true, type: "rule" } found && !BaseContent.IsFlowRule(found.type, found.canonicalId)) max = Int(project.Documents[found.path].Value["maxUnitsPerTeam"], 6);
             if (slots.Count > max) Error("/" + key, "team_capacity", "超过每队容量：" + max);
             for (int i = 0; i < slots.Count; i++)
             {

@@ -27,7 +27,8 @@ public static class ReferenceIndex
                     string direction = property.Key is "combatItemId" or "preparationItemId" ? "mapping" :
                         property.Key is "oreItemId" or "auxiliaryItemId" || lower.Contains("/materials/", StringComparison.Ordinal) ? "usage" :
                         lower.Contains("drop", StringComparison.Ordinal) || lower.Contains("/loot/", StringComparison.Ordinal) || lower.Contains("reward", StringComparison.Ordinal) ? "source" :
-                        property.Key == "equipmentSourceId" ? "usage" : "reference";
+                        property.Key == "equipmentSourceId" || sourceType == "recipe" && lower.StartsWith("/inputs/", StringComparison.Ordinal) || sourceType == "rule" && sourceId == BaseContent.FlowRulesId && lower.StartsWith("/sinks/", StringComparison.Ordinal) ? "usage" :
+                        sourceType == "recipe" && lower.StartsWith("/outputs/", StringComparison.Ordinal) || sourceType == "rule" && sourceId == BaseContent.FlowRulesId && lower.StartsWith("/sources/", StringComparison.Ordinal) ? "source" : "reference";
                     yield return new(id, new(sourceType, sourceId, path, child, ContentProject.Integer(obj["quantity"]), legacy, direction));
                 }
                 if (property.Key != "notes") foreach (var value in Walk(property.Value, child, sourceType, sourceId, path, legacy)) yield return value;
@@ -77,6 +78,7 @@ public static class ReferenceIndex
             {
                 values.AddRange(Walk(doc.Value, "", doc.Type, sourceId, doc.Path, false));
                 values.AddRange(CombatWalk(doc.Value, "", doc.Type, sourceId, doc.Path, false));
+                values.AddRange(BaseWalk(doc.Value, "", doc.Type, sourceId, doc.Path));
             }
         }
         string imports = project.Store.Resolve("_imports");
@@ -111,6 +113,26 @@ public static class ReferenceIndex
                 if (property.Key is "actionId" or "characterId" or "encounterId" or "rulesId" && CombatContent.Text(property.Value) != "")
                     yield return new(CombatContent.Text(property.Value), new(sourceType, sourceId, path, child, null, legacy, "reference"), property.Key switch { "actionId" => "skill", "characterId" => "character", "encounterId" => "encounter", _ => "rule" });
                 foreach (ReferenceOccurrence reference in CombatWalk(property.Value, child, sourceType, sourceId, path, legacy)) yield return reference;
+            }
+    }
+
+    public static IEnumerable<ReferenceOccurrence> BaseWalk(JsonNode? node, string pointer, string sourceType, string sourceId, string path)
+    {
+        if (node is JsonArray array)
+        {
+            for (int i = 0; i < array.Count; i++)
+                if (pointer.EndsWith("/recipeIds", StringComparison.Ordinal) && ContentProject.Text(array[i]) != "")
+                    yield return new(ContentProject.Text(array[i]), new(sourceType, sourceId, path, pointer + "/" + i, null, false, "reference"), "recipe");
+                else foreach (ReferenceOccurrence reference in BaseWalk(array[i], pointer + "/" + i, sourceType, sourceId, path)) yield return reference;
+        }
+        else if (node is JsonObject obj)
+            foreach (var property in obj)
+            {
+                if (property.Key == "notes") continue;
+                string child = pointer + "/" + Escape(property.Key);
+                if (property.Key == "buildingId" && ContentProject.Text(property.Value) != "")
+                    yield return new(ContentProject.Text(property.Value), new(sourceType, sourceId, path, child, null, false, "reference"), "building");
+                foreach (ReferenceOccurrence reference in BaseWalk(property.Value, child, sourceType, sourceId, path)) yield return reference;
             }
     }
 

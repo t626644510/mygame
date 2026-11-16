@@ -32,7 +32,7 @@ const sources = readdirSync(sourceDirectory).filter(name => name.endsWith('.cs')
 const child = spawn(dotnet, args, { cwd: repository, windowsHide: true, stdio: ['ignore', stdout, stderr], env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false' } });
 let identity;
 child.on('spawn', async () => {
-  identity = { schemaVersion: 1, scope: 'P1 isolated development backend', pid: child.pid, parentPid: process.pid, executable: dotnet, args, cwd: repository, contentRoot, exportRoot, port, bind: '127.0.0.1', parentExecutable: process.execPath, launcherArgs: process.argv, cliSha256: sha(readFileSync(cli)), sources, stdoutPath, stderrPath, startedAt: new Date().toISOString(), state: 'starting' };
+  identity = { schemaVersion: 1, scope: 'sim-cli isolated development backend', pid: child.pid, parentPid: process.pid, executable: dotnet, args, cwd: repository, contentRoot, exportRoot, port, bind: '127.0.0.1', parentExecutable: process.execPath, launcherArgs: process.argv, cliSha256: sha(readFileSync(cli)), sources, stdoutPath, stderrPath, startedAt: new Date().toISOString(), state: 'starting' };
   const save = () => {
     const text = JSON.stringify(identity, null, 2) + '\n';
     writeFileSync(path.join(identityDirectory, `${prefix}.json`), text);

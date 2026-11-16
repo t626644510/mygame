@@ -125,11 +125,13 @@ User 能定义建筑（大小、入口、功能、造价、可做的配方），
 
 - 地图尺寸：`width`、`height` 为 1–256。
 - `tiles` 只记录非默认格。默认格为可通行；`kind` 取 `blocked` 或 `water`，两者都不可通行。
-- 旋转：`rotation` 取 0 / 90 / 180 / 270，顺时针。旋转后占地的宽高按需交换，入口随之旋转。具体换算写进 sim-cli 的 README，前端和 sim-cli 用同一个算法，并用 D6 的样例对账。
+- 旋转：`rotation` 取 0 / 90 / 180 / 270，顺时针。旋转后占地的宽高按需交换，入口随之旋转。具体换算写进 sim-cli 的 README，前端和 sim-cli 用同一个算法，并用 D5 的样例对账（原 D6 为编号笔误）。
 - 归属：实例的 `ownership` 只能是 `public` 或 `private`，并且必须被建筑定义的 `ownership` 允许。
 - `zones` 是预留字段，本期始终为空数组。
 
-### 4.4 基地物品流规则 `content/rules/base_item_flows.json`
+### 4.4 基地物品流规则 `content/rules/rules_base_item_flows.json`
+
+源实体遵守文件名=id，因此与下例的 `rules_base_item_flows` 一致；聚合导出产物仍名为 `base_item_flows.json`。
 
 生产链分析需要知道链外的来源和去处：
 
@@ -225,6 +227,7 @@ namespace Prototype.BaseEconomy
 
 - 数值保留 4 位小数，用 invariant culture。
 - `graph` 供前端画图：节点分 `item`、`recipe` 两类，边为 `item → recipe`（投入）和 `recipe → item`（产出），边上带数量。
+- 开工口径补充：上述五种 `flag` 都是静态分析提示，不单独硬拦 export；`non_positive_margin` 用琥珀提示，其余问题节点红描边。硬门槛仍是字段/schema、真实缺失引用、有效定义依赖未实现草稿，以及第6节五种布局错误。`no_building` 指没有建筑定义引用该配方，不是布局中尚未摆工坊。
 
 ## 8. P3-C：界面
 

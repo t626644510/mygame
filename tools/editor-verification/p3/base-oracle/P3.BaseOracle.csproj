@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Invoke the existing first-meal state machine, without building the product CLI. -->
+    <Compile Include="../../../../Game/Assets/Prototype/BaseEconomy/Runtime/BaseScenario.cs" Link="OriginalKernel/BaseScenario.cs" />
+    <Compile Include="../../../../Game/Assets/Prototype/BaseEconomy/Runtime/BaseSession.cs" Link="OriginalKernel/BaseSession.cs" />
+    <Compile Include="../../../../Game/Assets/Prototype/BaseEconomy/Runtime/BaseSnapshot.cs" Link="OriginalKernel/BaseSnapshot.cs" />
+    <Compile Include="../../../sim-cli/src/MyGame.Sim.Cli/UnityJson.cs" Link="OriginalReader/UnityJson.cs" />
+  </ItemGroup>
+</Project>
