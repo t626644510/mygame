@@ -76,8 +76,8 @@ tools/editor-web/           网页编辑器（P1 起）
 
 | 规则 | 做法 |
 | --- | --- |
-| 格式 | `^[a-z][a-z0-9_]*$`，带类型前缀：物品 `mat_ eq_ con_ cur_ key_`，角色 `chr_`，建筑 `bld_`，配方 `rcp_`，遭遇 `enc_`。现有 `mage_*`、`expedition-ore`、`quenching-sand` 等旧 ID 原样保留。 |
-| 唯一 | 全内容库唯一，不只在类型内唯一。 |
+| 格式 | `^[a-z][a-z0-9_]*$`，新建实体带类型前缀：物品 `mat_ eq_ con_ cur_ key_`，角色 `chr_`，建筑 `bld_`，配方 `rcp_`，遭遇 `enc_`。符合格式的旧 ID（如 `mage_*`、`expedition_ore`）原样保留、不加前缀；带连字符的旧写法（如 `expedition-ore`、`quenching-sand`）记入 `aliases`。 |
+| 唯一 | 所有 `id` 与 `aliases` 合在一起全内容库唯一，不只在类型内唯一。 |
 | 不可变 | 首次保存后锁定；改名只改显示名。改 ID 走“迁移”：改写全部引用并在 `aliases` 留旧 ID。 |
 | 删除 | 被引用时禁止删除，列出引用处。 |
 | 定义与实例 | 物品表只存定义（巡卫短剑）；带强化等级和归属的个体（`guard-linen-sword-001`）是运行时状态，不进编辑器。 |
@@ -212,10 +212,12 @@ tools/editor-web/           网页编辑器（P1 起）
 
 ## 分期与验收
 
+施工单：[P0](P0_WORK_ORDER.md) · [P1](P1_WORK_ORDER.md) · [P2](P2_WORK_ORDER.md) · [P3](P3_WORK_ORDER.md)。P4 等基地专项交付 R5 后再写。P2、P3 写于 P0 交付前，开工前按 P0 实际接口复核。
+
 | 期 | 内容 | 负责 | 验收要点 |
 | --- | --- | --- | --- |
 | P0 | sim-cli、content 骨架、需求单 | 工程；战斗专项补一个公开对比方法 | 见 [P0_WORK_ORDER.md](P0_WORK_ORDER.md) |
-| P1 | 编辑器外壳 + 物品编辑器 + export | 前端 Agent | 录入现有 5 种物品且旧 ID 保留；强化表复现“矿料 3 + 淬火砂 2 → 攻击 +4”；ID 锁定、重复拒绝、被引用不可删；粘贴 10 行批量建冲突行单独标出；1280×800 与 1920×1080 截图无横向溢出 |
+| P1 | 编辑器外壳 + 物品编辑器 + export | 前端 Agent + 工程 | 录入现有 5 种物品，旧连字符 ID 作为 alias 解析到同一物品；强化表复现“矿料 3 + 淬火砂 2 → 攻击 +4”；ID 锁定、重复拒绝、被引用不可删；粘贴 10 行批量建冲突行单独标出；1280×800 与 1920×1080 截图无横向溢出 |
 | P2 | 战斗编辑器 | 前端 + 工程（组装器、遭遇格式） | 重建 `round4_mage_library` 后导出战例运行结果一致；交换两条指令后显示的第一处分歧与 `CombatSampleRuns` 一致；智力 40 → 10 时提示与 C# `validationReason` 完全相同；“未实现”技能进不了试跑但出现在 `REQUESTS.md` |
 | P3 | 地图 + 配方 + 静态链 | 前端；基地专项改寻路支持障碍 | 重建首餐布局，距离叠加推出 tick 7 / 17；重叠、越界、入口被堵、不可达各一例全部拦截；无来源材料被报出，配方显示单位工时增值 |
 | P4 | 基地沙盘 + 行为档案 | 待定 | 等《居民决策模型 v0》后再写 |
@@ -223,6 +225,8 @@ tools/editor-web/           网页编辑器（P1 起）
 前端技术栈：React + TypeScript + Vite，Tailwind + shadcn/ui，图标 Lucide，状态 Zustand，指令拖拽 dnd-kit。
 
 ## 需要其他专项补的
+
+详细需求说明见 [SPECIALIST_REQUESTS.md](SPECIALIST_REQUESTS.md)（R1–R6）。
 
 | 需求 | 归属 | 影响 |
 | --- | --- | --- |
