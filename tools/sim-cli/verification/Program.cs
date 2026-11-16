@@ -329,8 +329,19 @@ internal static class Verification
             var comparison = await client.PostAsync("/api/compare", new StringContent(UnityJson.Serialize(compareBody), UnityJson.Utf8, "application/json"));
             var compareCli = await Call("compare", Config("round2_ambush.json"), variantFile);
             Require(comparison.IsSuccessStatusCode && (await comparison.Content.ReadAsByteArrayAsync()).SequenceEqual(UnityJson.Utf8.GetBytes(compareCli.Text)), "HTTP/CLI exact bytes compare");
-            string entity = UnityJson.Serialize(new { schemaVersion = 1, id = "mat_probe", name = "HTTP probe" });
-            var put = await client.PutAsync("/api/content/items/mat_probe", new StringContent(entity, UnityJson.Utf8, "application/json"));
+            string entity = UnityJson.Serialize(new
+            {
+                schemaVersion = 1, id = "mat_probe", aliases = Array.Empty<string>(), name = "HTTP probe", category = "material",
+                description = "Isolated HTTP regression fixture.", icon = "", stackLimit = 99, baseValue = 0, tags = Array.Empty<string>(),
+                equipment = new { slot = "", combatBonus = Array.Empty<object>(), enhancement = Array.Empty<object>() },
+                consumable = new { effects = Array.Empty<object>() }, draft = false
+            });
+            using var create = new HttpRequestMessage(HttpMethod.Put, "/api/content/items/mat_probe")
+            {
+                Content = new StringContent(entity, UnityJson.Utf8, "application/json")
+            };
+            create.Headers.Add("If-None-Match", "*");
+            var put = await client.SendAsync(create);
             byte[] got = await client.GetByteArrayAsync("/api/content/items/mat_probe");
             Require(put.IsSuccessStatusCode && got.SequenceEqual(UnityJson.Utf8.GetBytes(entity)) && File.ReadAllBytes(Path.Combine(content, "items", "mat_probe.json")).SequenceEqual(got), "A10 PUT then GET exact bytes");
             var invalid = await client.PutAsync("/api/content/items/mat_probe", new StringContent("{\"schemaVersion\":1,\"id\":\"other\"}", UnityJson.Utf8, "application/json"));

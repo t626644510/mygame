@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "schemaVersion": 1,
+      "aliases": [],
+      "icon": "",
+      "equipment": {
+        "slot": "",
+        "combatBonus": [],
+        "enhancement": []
+      },
+      "consumable": {
+        "effects": []
+      },
+      "id": "con_simple_meal",
+      "name": "简餐",
+      "category": "consumable",
+      "description": "参考价10取自mealUnitPrice，旧首餐每次1餐；没有已接通的消耗效果。新增效果必须为草稿并附需求，不能自动实现居民规则。",
+      "stackLimit": 99,
+      "baseValue": 10,
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "aliases": [],
+      "icon": "",
+      "equipment": {
+        "slot": "weapon",
+        "combatBonus": [
+          {
+            "id": "equipmentDamageBonus",
+            "value": 0
+          }
+        ],
+        "enhancement": [
+          {
+            "level": 1,
+            "cash": 0,
+            "attackBonusDelta": 4,
+            "materials": [
+              {
+                "itemId": "expedition_ore",
+                "quantity": 3
+              },
+              {
+                "itemId": "quenching_sand",
+                "quantity": 2
+              }
+            ]
+          }
+        ]
+      },
+      "consumable": {
+        "effects": []
+      },
+      "id": "eq_patrol_sword",
+      "name": "巡卫短剑",
+      "category": "equipment",
+      "description": "参考价待定（暂填40）；公营战士短剑定义。旧guard-linen-sword-001仅是实例ID，不作定义别名。强化3矿、2砂、攻击+4来自preparation.json，可替换测试值。",
+      "stackLimit": 1,
+      "baseValue": 40,
+      "tags": [
+        "weapon",
+        "public_issue"
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "aliases": [
+        "expedition-ore"
+      ],
+      "icon": "",
+      "equipment": {
+        "slot": "",
+        "combatBonus": [],
+        "enhancement": []
+      },
+      "consumable": {
+        "effects": []
+      },
+      "id": "expedition_ore",
+      "name": "出征矿料",
+      "category": "material",
+      "description": "参考价待定（暂填4）；第二轮可替换测试数据。旧战斗ID为expedition_ore，旧基地ID为expedition-ore；Helper只解析别名，不改旧Runtime。",
+      "stackLimit": 999,
+      "baseValue": 4,
+      "tags": [
+        "expedition",
+        "enhancement"
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "aliases": [],
+      "icon": "",
+      "equipment": {
+        "slot": "",
+        "combatBonus": [],
+        "enhancement": []
+      },
+      "consumable": {
+        "effects": []
+      },
+      "id": "mat_grain",
+      "name": "粮食",
+      "category": "material",
+      "description": "参考价6取自BaseEconomy/default.json的grainUnitPrice。旧配置没有字符串物品ID；grainPerMeal=1仅为首餐测试参数，不新增计量单位。",
+      "stackLimit": 999,
+      "baseValue": 6,
+      "tags": [
+        "food",
+        "ingredient"
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "aliases": [
+        "quenching-sand"
+      ],
+      "icon": "",
+      "equipment": {
+        "slot": "",
+        "combatBonus": [],
+        "enhancement": []
+      },
+      "consumable": {
+        "effects": []
+      },
+      "id": "quenching_sand",
+      "name": "淬火砂",
+      "category": "material",
+      "description": "参考价6取自preparation.json的auxiliaryUnitPrice；均为可替换测试值。旧基地ID为quenching-sand。",
+      "stackLimit": 999,
+      "baseValue": 6,
+      "tags": [
+        "enhancement"
+      ]
+    }
+  ]
+}

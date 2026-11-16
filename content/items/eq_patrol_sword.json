@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "aliases": [],
+  "icon": "",
+  "equipment": {
+    "slot": "weapon",
+    "combatBonus": [
+      {
+        "id": "equipmentDamageBonus",
+        "value": 0
+      }
+    ],
+    "enhancement": [
+      {
+        "level": 1,
+        "cash": 0,
+        "attackBonusDelta": 4,
+        "materials": [
+          {
+            "itemId": "expedition_ore",
+            "quantity": 3
+          },
+          {
+            "itemId": "quenching_sand",
+            "quantity": 2
+          }
+        ]
+      }
+    ]
+  },
+  "consumable": {
+    "effects": []
+  },
+  "draft": false,
+  "id": "eq_patrol_sword",
+  "name": "巡卫短剑",
+  "category": "equipment",
+  "description": "参考价待定（暂填40）；公营战士短剑定义。旧guard-linen-sword-001仅是实例ID，不作定义别名。强化3矿、2砂、攻击+4来自preparation.json，可替换测试值。",
+  "stackLimit": 1,
+  "baseValue": 40,
+  "tags": [
+    "weapon",
+    "public_issue"
+  ]
+}

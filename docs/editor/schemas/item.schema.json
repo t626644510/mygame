@@ -1,0 +1,223 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "aliases",
+    "name",
+    "category",
+    "description",
+    "icon",
+    "stackLimit",
+    "baseValue",
+    "tags",
+    "draft",
+    "equipment",
+    "consumable"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "uniqueItems": true
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "category": {
+      "enum": [
+        "material",
+        "equipment",
+        "consumable",
+        "currency",
+        "key"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "stackLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "baseValue": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      }
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "combatBonus",
+        "enhancement"
+      ],
+      "properties": {
+        "slot": {
+          "enum": [
+            "",
+            "weapon",
+            "armor",
+            "accessory"
+          ]
+        },
+        "combatBonus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "value"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              }
+            }
+          }
+        },
+        "enhancement": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "level",
+              "cash",
+              "attackBonusDelta",
+              "materials"
+            ],
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "cash": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "attackBonusDelta": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "materials": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "itemId",
+                    "quantity"
+                  ],
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "consumable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effects"
+      ],
+      "properties": {
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "note"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "notes": {
+      "description": "Optional editor metadata; removed by export."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "P1 item definition",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "category": {
+            "const": "equipment"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stackLimit": {
+            "const": 1
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "C# additionally enforces filename/global ID+alias uniqueness, continuous enhancement levels, resolved materials, category empty extensions, capability+draft+associated request and request target existence."
+}

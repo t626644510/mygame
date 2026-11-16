@@ -37,11 +37,21 @@ public sealed class ContentStore
 
     private static void CheckLinks(string path)
     {
-        if ((Directory.Exists(path) || File.Exists(path)) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new ArgumentException("Content paths must not contain symbolic links or reparse points.");
+        try
+        {
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new ArgumentException("Content paths must not contain symbolic links or reparse points.");
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
     }
 
-    private static string DirectoryFor(string type) => Types.TryGetValue(type, out string? directory) ? directory : throw new ArgumentException("Unknown content type: " + type);
+    public static string DirectoryFor(string type) => Types.TryGetValue(type, out string? directory) ? directory : throw new ArgumentException("Unknown content type: " + type);
+    public static string CanonicalType(string type) => DirectoryFor(type) switch
+    {
+        "items" => "item", "skills" => "skill", "characters" => "character", "encounters" => "encounter",
+        "buildings" => "building", "recipes" => "recipe", "layouts" => "layout", "scenarios" => "scenario", _ => throw new ArgumentException("Unknown content type.")
+    };
+    public static string[] EntityTypes => new[] { "item", "skill", "character", "encounter", "building", "recipe", "layout", "scenario" };
 
     public string EntityPath(string type, string id)
     {

@@ -21,7 +21,7 @@ public sealed class RequestRecord
     public string resolvedBy = "";
 }
 
-public sealed record ContentError(string path, string code, string message);
+public sealed record ContentError(string path, string code, string message, string field = "");
 public sealed record ContentValidation(bool ok, ContentError[] errors, string[] warnings);
 
 public sealed class RequestStore
@@ -59,7 +59,7 @@ public sealed class RequestStore
         if (!Kinds.Contains(Text("kind"))) Error("kind", "Invalid kind: " + Text("kind"));
         if (!Owners.Contains(Text("owner"))) Error("owner", "Invalid owner: " + Text("owner"));
         if (!Statuses.Contains(Text("status"))) Error("status", "Invalid status: " + Text("status"));
-        if (!Regex.IsMatch(Text("target"), "^(global|(item|skill|character|encounter|building|recipe|layout|scenario):[a-z][a-z0-9_]*)$", RegexOptions.CultureInvariant))
+        if (!Regex.IsMatch(Text("target"), "^(global|(item|skill|character|encounter|building|recipe|layout|scenario):[a-z][a-z0-9_-]*)$", RegexOptions.CultureInvariant))
             Error("target", "target must be global or <type>:<id>.");
         if (string.IsNullOrWhiteSpace(Text("title"))) Error("title", "title must not be empty.");
         string date = Text("createdAt");
@@ -129,10 +129,12 @@ public sealed class RequestStore
         throw new ArgumentException("Request id space REQ-0001..REQ-9999 is exhausted.");
     }
 
-    public string Markdown()
+    public string Markdown() => FormatMarkdown(ReadAll());
+
+    public static string FormatMarkdown(IEnumerable<RequestRecord> records)
     {
         var text = new StringBuilder("# 需求单\n\n由 sim-cli 生成，勿手改。分拣权属于总策划或 User。\n");
-        foreach (var owner in ReadAll().GroupBy(record => record.owner).OrderBy(group => group.Key, StringComparer.Ordinal))
+        foreach (var owner in records.GroupBy(record => record.owner).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
             text.Append("\n## ").Append(owner.Key).Append("\n");
             var ordered = owner.OrderBy(record => Array.IndexOf(Statuses, record.status)).ThenBy(record => record.id, StringComparer.Ordinal).ToArray();

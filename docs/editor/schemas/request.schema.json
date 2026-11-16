@@ -10,7 +10,7 @@
     "id": { "type": "string", "pattern": "^REQ-[0-9]{4}$" },
     "kind": { "type": "string", "enum": ["note", "new_effect", "new_condition", "new_selector", "new_status", "new_building_function", "new_item_property", "balance", "bug"] },
     "owner": { "type": "string", "enum": ["combat", "base", "engineering", "art", "world", "planning"] },
-    "target": { "type": "string", "pattern": "^(global|(item|skill|character|encounter|building|recipe|layout|scenario):[a-z][a-z0-9_]*)$" },
+    "target": { "type": "string", "pattern": "^(global|(item|skill|character|encounter|building|recipe|layout|scenario):[a-z][a-z0-9_-]*)$" },
     "title": { "type": "string", "minLength": 1, "pattern": "\\S" },
     "status": { "type": "string", "enum": ["open", "triaged", "in_progress", "done", "rejected"] },
     "createdAt": { "type": "string", "description": "Explicit metadata only; empty means unknown. Nonempty values are valid ISO calendar dates.", "anyOf": [{ "const": "" }, { "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }] },

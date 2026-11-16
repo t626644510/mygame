@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    "quenching-sand"
+  ],
+  "icon": "",
+  "equipment": {
+    "slot": "",
+    "combatBonus": [],
+    "enhancement": []
+  },
+  "consumable": {
+    "effects": []
+  },
+  "draft": false,
+  "id": "quenching_sand",
+  "name": "淬火砂",
+  "category": "material",
+  "description": "参考价6取自preparation.json的auxiliaryUnitPrice；均为可替换测试值。旧基地ID为quenching-sand。",
+  "stackLimit": 999,
+  "baseValue": 6,
+  "tags": [
+    "enhancement"
+  ]
+}

@@ -1,0 +1,15 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runRecorded, verifySavedBytes, writeJson } from './raw-evidence.mjs';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const outputIndex = args.indexOf('--output');
+if (outputIndex < 0 || !args[outputIndex + 1]) throw new Error('--output NEW_DIR is required.');
+const output = path.resolve(args[outputIndex + 1]);
+const receipt = await runRecorded({ executable: process.execPath, args: [path.join(here, 'browser-checks.mjs'), ...args], cwd: path.resolve(here, '../..'), prefix: path.join(output, 'browser-process'), timeoutMs: 600000, env: { DEBUG: 'pw:browser' } });
+await verifySavedBytes(receipt);
+const { stdoutBytes, stderrBytes, ...saved } = receipt;
+await writeJson(path.join(output, 'BROWSER_PROCESS_RECEIPT.json'), saved);
+process.stdout.write(stdoutBytes);
+process.stdout.write(`${JSON.stringify({ rawProcessReceipt: path.join(output, 'BROWSER_PROCESS_RECEIPT.json'), exitCode: receipt.exitCode })}\n`);
+process.exitCode = receipt.exitCode ?? 1;

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "p0MergedCommit": "84ed464d12fec3291f0cdd237dd9c4b70f37062d",
+  "basis": "P1_WORK_ORDER.md plus independent read-only parsing of original Prototype JSON; no product command was run to derive expected values",
+  "items": [
+    {"id":"expedition_ore","aliases":["expedition-ore"],"name":"出征矿料","category":"material","baseValue":4,"provisionalValue":true},
+    {"id":"quenching_sand","aliases":["quenching-sand"],"name":"淬火砂","category":"material","baseValue":6,"provisionalValue":false},
+    {"id":"mat_grain","aliases":[],"name":"粮食","category":"material","baseValue":6,"provisionalValue":false},
+    {"id":"con_simple_meal","aliases":[],"name":"简餐","category":"consumable","baseValue":10,"provisionalValue":false},
+    {"id":"eq_patrol_sword","aliases":[],"name":"巡卫短剑","category":"equipment","baseValue":40,"stackLimit":1,"provisionalValue":true}
+  ],
+  "enhancement": {"level":1,"cash":0,"attackBonusDelta":4,"materials":[{"itemId":"expedition_ore","quantity":3},{"itemId":"quenching_sand","quantity":2}]},
+  "oreLegacyReferences": [
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round2_expedition.json","jsonPointer":"/encounters/0/publicDrops/0/itemId","value":"expedition_ore","quantity":2},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round2_expedition.json","jsonPointer":"/encounters/1/publicDrops/0/itemId","value":"expedition_ore","quantity":3},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round4_expedition.json","jsonPointer":"/encounters/0/publicDrops/0/itemId","value":"expedition_ore","quantity":1},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round4_expedition.json","jsonPointer":"/encounters/1/publicDrops/0/itemId","value":"expedition_ore","quantity":1},
+    {"path":"Game/Assets/StreamingAssets/Prototype/BaseEconomy/preparation.json","jsonPointer":"/oreItemId","value":"expedition-ore","quantity":null},
+    {"path":"Game/Assets/StreamingAssets/Prototype/BaseEconomy/preparation.json","jsonPointer":"/presetExpeditionDrop/items/0/itemId","value":"expedition-ore","quantity":3},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Expedition/default.json","jsonPointer":"/itemMappings/0/combatItemId","value":"expedition_ore","quantity":null},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Expedition/default.json","jsonPointer":"/itemMappings/0/preparationItemId","value":"expedition-ore","quantity":null}
+  ],
+  "sandLegacyReferences": [
+    {"path":"Game/Assets/StreamingAssets/Prototype/BaseEconomy/preparation.json","jsonPointer":"/auxiliaryItemId","value":"quenching-sand","quantity":null}
+  ],
+  "legacySourceFiles": [
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round2_expedition.json","sha256":"195bcf562d435c45e76ce5d6a75a745506315f6376438765127b15f9d6c06ca3"},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Combat/round4_expedition.json","sha256":"64274fecbaa66566c2add40693be593fe686c093b2538c754782e4d32f552e75","sha256Lf":"4ea7be56334c23ce0b2db9efd19a52e1dfe0048526846e927da91b09513bf9a0"},
+    {"path":"Game/Assets/StreamingAssets/Prototype/BaseEconomy/preparation.json","sha256":"4ffd882b52d64c402ac7cabaeaece76e0f68f7fe5dd0dd51f69dc250f5573a12"},
+    {"path":"Game/Assets/StreamingAssets/Prototype/Expedition/default.json","sha256":"43440f3ae67d30689c05f2dc70c5c88ae9ec6cf094fa49c9262846d75ed07605"},
+    {"path":"Game/Assets/StreamingAssets/Prototype/BaseEconomy/default.json","sha256":"72584d098a0cf59a395295199da6f15d106e706bda77acc9bc4035bce9c70f7e"}
+  ],
+  "unregisteredEquipmentLabels": ["training_weapon","round3_training_weapon","round4_training_weapon"],
+  "excludedInstanceIds": ["guard-linen-sword-001"],
+  "testServices": {"backendPort":5186,"frontendPort":5176},
+  "status": "NotRun"
+}

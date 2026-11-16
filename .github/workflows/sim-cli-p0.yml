@@ -1,10 +1,12 @@
-name: sim-cli P0
+name: Helper editor checks
 
 on:
   push:
     branches: [main]
     paths:
       - 'tools/sim-cli/**'
+      - 'tools/editor-web/**'
+      - 'tools/editor-verification/**'
       - 'content/**'
       - 'docs/editor/**'
       - 'Game/Assets/Prototype/Combat/**'
@@ -17,6 +19,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'tools/sim-cli/**'
+      - 'tools/editor-web/**'
+      - 'tools/editor-verification/**'
       - 'content/**'
       - 'docs/editor/**'
       - 'Game/Assets/Prototype/Combat/**'
@@ -53,6 +57,15 @@ jobs:
           dotnet-version: '8.0.428'
       - name: Build formal projects and verify actual CLI outputs
         run: ./verification/Invoke-P0Checks.ps1 -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sim-cli-p0')
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.12.0'
+          package-manager-cache: false
+      - name: Verify P1 backend and frontend build
+        run: |
+          $repository = Split-Path -Parent (Split-Path -Parent $PWD.Path)
+          node verification/Invoke-P1Checks.mjs --output (Join-Path $repository 'outputs/p1-ci') --work (Join-Path $repository 'work/p1-ci') --dotnet (Get-Command dotnet).Source --cli (Join-Path $PWD.Path 'src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll') --pwsh (Get-Process -Id $PID).Path
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Preserve build logs and acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,4 +73,12 @@ jobs:
           name: sim-cli-p0-${{ matrix.os }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/sim-cli-p0
           if-no-files-found: error
+          retention-days: 30
+      - name: Preserve P1 raw commands and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helper-editor-p1-${{ matrix.os }}-${{ github.run_attempt }}
+          path: outputs/p1-ci
+          if-no-files-found: warn
           retention-days: 30

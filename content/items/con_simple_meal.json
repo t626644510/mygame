@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "aliases": [],
+  "icon": "",
+  "equipment": {
+    "slot": "",
+    "combatBonus": [],
+    "enhancement": []
+  },
+  "consumable": {
+    "effects": []
+  },
+  "draft": false,
+  "id": "con_simple_meal",
+  "name": "简餐",
+  "category": "consumable",
+  "description": "参考价10取自mealUnitPrice，旧首餐每次1餐；没有已接通的消耗效果。新增效果必须为草稿并附需求，不能自动实现居民规则。",
+  "stackLimit": 99,
+  "baseValue": 10,
+  "tags": [
+    "food"
+  ]
+}
