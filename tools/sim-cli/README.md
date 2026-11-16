@@ -1,4 +1,4 @@
-# sim-cli（P0）
+# sim-cli
 
 本地内容工具，直接编译 Unity 工程现有的 Combat、Tactics、BaseEconomy、Expedition Runtime 源码。四个库分别保持 asmdef 边界，目标均为 `netstandard2.1` / C# 9。CLI 目标为 `net8.0`；没有第三方 NuGet 依赖。
 
@@ -47,6 +47,13 @@ dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll catalog -
 dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll validate Game/Assets/StreamingAssets/Prototype/Combat/round4_mage_library.json
 dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll validate --content content
 
+# 物品 ID/旧别名引用与旧配置登记情况；旧配置只读
+dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll refs expedition-ore --content content --out work/ore-refs.json
+dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll legacy-scan --content content --out work/legacy-scan.json
+
+# 先完整校验，再导出；编辑源与运行时输出分开
+dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll export --content content --out Game/Assets/StreamingAssets/Content
+
 # CombatRunResult 与 ExportLogText 原文；预算参数可省略
 dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll run-combat Game/Assets/StreamingAssets/Prototype/Combat/default.json --max-steps 10000 --max-wait 100000 --log work/combat.txt --out work/combat.json
 dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll run-expedition Game/Assets/StreamingAssets/Prototype/Combat/round4_expedition.json --out work/expedition.json
@@ -64,10 +71,10 @@ dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll requests 
 dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll selftest round4 --out work/round4-reports
 
 # 本地 HTTP，Ctrl+C 停止
-dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll serve --port 5178 --content content
+dotnet tools/sim-cli/src/MyGame.Sim.Cli/bin/Release/net8.0/sim-cli.dll serve --port 5185 --content content --export-out Game/Assets/StreamingAssets/Content
 ```
 
-`catalog`、`validate`、`run-combat`、`run-expedition`、`compare` 支持 `--out <file>`；不带时输出到 stdout。`selftest --out` 是目录；`requests --out` 是 Markdown 文件。错误信息在 stderr；退出码 `0` 为成功，`1` 为内容/校验错误，`2` 为用法/IO 错误。非法数字和显式非法日期属于用法错误。
+`catalog`、`validate`、`refs`、`legacy-scan`、`run-combat`、`run-expedition`、`compare` 支持 `--out <file>`；不带时输出到 stdout。`selftest --out` 和 `export --out` 是目录；`requests --out` 是 Markdown 文件。错误信息在 stderr；退出码 `0` 为成功，`1` 为内容/校验错误，`2` 为用法/IO 错误。非法数字和显式非法日期属于用法错误。
 
 新需求分配下一个 `REQ-NNNN`，默认 `status=open`；CLI 和 HTTP 不自动分拣。`createdAt` 始终存在，默认空串表示**未填写日期**，不会读取当前时钟。可显式提供严格的 `yyyy-MM-dd` 真实日历日期（例如 `2026-02-30` 拒绝）。三条内置需求全是 P0 格式样例，样例状态不构成实际需求授权。
 
@@ -81,20 +88,44 @@ HTTP 使用 **ASP.NET Core Minimal API / Kestrel**，依赖随 SDK 安装的共�
 
 | 方法 | 路径 | 内容 |
 | --- | --- | --- |
-| GET | `/api/health` | ok、version、contentRoot、gitCommit；读不到 Git 时为空字符串 |
+| GET | `/api/health` | ok、version、contentRoot、exportRoot、gitCommit；读不到 Git 时为空字符串 |
 | GET | `/api/catalog` | 与 CLI catalog 完全相同的 JSON 字节 |
+| GET | `/api/capabilities` | 可编辑类型、物品类型、槽位及已接入加成字段 |
+| GET | `/api/ids/{id}` | exists、type、canonicalId、path、viaAlias |
+| GET | `/api/refs/{id}` | 全部引用及路径、JSON Pointer、来源/用途方向、实际数量或 null |
+| POST | `/api/validate-item` | `{entity,mode:"create"\|"update",requests?:[]}`；纯校验，200/422，无写入 |
+| POST | `/api/validate-content` | `{}`；完整内容校验，200/422 |
+| POST | `/api/export` | `{}`；写到 serve 的固定 exportRoot，拒绝 body 指定输出路径 |
 | POST | `/api/validate` | body=战例；有效 200，Runtime 校验不通过 422 |
 | POST | `/api/run-combat` | body=战例；默认运行预算 |
 | POST | `/api/run-expedition` | body=出征配置 |
 | POST | `/api/compare` | body=`{"baseline":{...},"variant":{...}}` |
 | GET | `/api/content/{type}` | `[{id,path}]`；单数/复数类型均可 |
-| GET/PUT/DELETE | `/api/content/{type}/{id}` | 单实体；PUT 校验失败 422；不存在 404 |
+| GET/PUT/DELETE | `/api/content/{type}/{id}` | GET 附 ETag；PUT 要求创建/更新前提；字段错误 422、冲突或有引用删除 409、不存在 404 |
 | GET | `/api/requests` | JSON 需求数组（CLI requests 生成 Markdown 汇总） |
 | POST | `/api/requests` | kind/owner/target/title，另可带 body/field/expected/createdAt；服务端分 ID，创建 201 |
 
-模拟类 HTTP 与对应 CLI 共用序列化器，输出逐字节相同。P0 尚无物品/技能/建筑领域 schema，实体 PUT 只检查 JSON 对象、`schemaVersion=1` 与 URL/实体 ID 一致；`scenarios` 另外调用真实 CombatSession 校验。完整实体规则属于后续工单，不能把 P0 的基础检查称为完整内容校验。`validate --content` 仅验证 `_requests/`。
+模拟类 HTTP 与对应 CLI 共用序列化器，输出逐字节相同。P1 的 `validate --content` 包含物品 schema、文件名、跨实体 ID/alias 唯一性、材料引用及物品需求目标。技能、建筑等模块的专用规则属于各自后续工单。
 
-## 复核
+物品新建使用 `If-None-Match: *`；更新使用 GET 返回的完整含引号 `If-Match`。409 返回当前磁盘对象和当前 ETag；客户端选择保留自己的修改后仍须带该新 ETag 重试。PUT 路径与对象 ID 不同为 422。纯校验入口的 create 重复 ID/alias 为 422；真正 PUT 已存在同 URL 且带 `If-None-Match: *` 为 409。两种操作的区别和字段错误 DTO 见 [P1_API_CONTRACT.md](../../docs/editor/P1_API_CONTRACT.md)。
+
+物品 PUT 可用原对象，或 `{entity,requests:[...]}` 原子保存物品与需求。缺少能力的物品须为 draft 且关联非 note 需求；合法 draft 从导出集合剔除，其余有效物品仍可导出。活动物品引用 draft 时导出失败。导出剔除编辑元数据，按 ID 排序；`manifest.json` 只记录受管文件哈希及数量。失败不改目标目录；成功仅清理上次清单里的过期产物，保留其他文件及 `.meta`。
+
+网页开发先启动 sim-cli，再启动 [editor-web](../editor-web/README.md)。需要进程身份记录时可使用可选 Node 启动器，写入实际服务 PID、镜像、参数、DLL/源码哈希及原始日志：
+
+```sh
+node tools/sim-cli/dev-server.mjs --port 5185 --content work/editor/content --export-out work/editor/runtime --identity-dir work/editor/backend --dotnet work/dotnet/dotnet.exe
+```
+
+上例是 Windows 的 SDK 文件名；macOS 把 `--dotnet` 改为 `work/dotnet/dotnet`。先将所需内容复制到隔离 content 根。前端手工审查、离线停启和独立验收各用自己的数据根与端口；启动器不自动复制正式内容。Node 只用于该开发包装器，正式 CLI/HTTP 不依赖 Node。
+
+`--cli <path>` 可指定独立构建的 `sim-cli.dll`，便于审查服务保持旧版本、修改版在新数据根验证。启动记录中的 DLL 哈希代表实际运行版本；不能把当前源码当成已加载的版本。
+
+## P0 回归与 P1 验收
+
+P1 的独立检查、浏览器操作和 Unity 读回入口见 [editor-verification](../editor-verification/README.md)，实际 B1–B13 状态见 [P1_VERIFICATION.md](../../docs/editor/P1_VERIFICATION.md)。P0 已冻结证据保留在自己的验收文档；P1 收紧的领域校验及 PUT 前提须使用 P1 夹具验证。
+
+CI 复用标准 Windows/macOS 矩阵，checkout 后核对精确 PR head。P0 回归步骤保留，P1 步骤使用 Node 24.12.0、`npm ci`、真实后端验收、前端 build/lint；命令的原始 stdout/stderr 与退出码随 artifact 保存。`verification/Invoke-P1Checks.mjs` 只启动隔离 CLI/HTTP，不运行浏览器或 Unity。Node 安装与关闭包缓存的设置依据 [官方 setup-node](https://github.com/actions/setup-node)，artifact 设置依据 [GitHub 文档](https://docs.github.com/en/actions/tutorials/store-and-share-data)。
 
 Windows/macOS 均用 PowerShell 7，从仓库根执行（精确 SDK 已安装时）：
 

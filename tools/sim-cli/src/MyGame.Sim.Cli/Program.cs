@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Prototype.Combat;
 
 namespace MyGame.Sim.Cli;
@@ -14,7 +15,7 @@ public static class Program
         {
             if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
             {
-                Console.Write("sim-cli: catalog | validate | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
+                Console.Write("sim-cli: catalog | validate | refs | legacy-scan | export | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
                 return args.Length == 0 ? 2 : 0;
             }
             var options = new Options(args.Skip(1).ToArray());
@@ -30,7 +31,7 @@ public static class Program
                     if (options.Has("content"))
                     {
                         options.Check(0, "content", "out");
-                        ContentValidation validation = new RequestStore(new ContentStore(content)).Validate();
+                        ContentValidation validation = ContentProject.Load(new ContentStore(content), repository).Validate();
                         result = validation; exitCode = validation.ok ? 0 : 1;
                         foreach (ContentError error in validation.errors) Console.Error.WriteLine(error.path + ": " + error.message);
                     }
@@ -44,21 +45,33 @@ public static class Program
                     break;
                 case "run-combat":
                     options.Check(1, "max-steps", "max-wait", "log", "out");
+                    ReferenceIndex.EnsureRunnable(ContentProject.Load(new ContentStore(content), repository), JsonNode.Parse(File.ReadAllText(options.Positionals[0])));
                     var session = new CombatSession(Read<CombatScenario>(options.Positionals[0]));
                     result = session.RunToCompletion(options.Integer("max-steps", 10000), options.Number("max-wait", 100000));
                     if (options.Has("log")) UnityJson.WriteFile(options.Get("log"), session.ExportLogText());
                     break;
                 case "run-expedition":
-                    options.Check(1, "out"); result = Simulation.Expedition(Read<CombatExpeditionConfig>(options.Positionals[0])); break;
+                    options.Check(1, "out");
+                    ReferenceIndex.EnsureRunnable(ContentProject.Load(new ContentStore(content), repository), JsonNode.Parse(File.ReadAllText(options.Positionals[0])));
+                    result = Simulation.Expedition(Read<CombatExpeditionConfig>(options.Positionals[0])); break;
                 case "compare":
-                    options.Check(2, "out"); result = Simulation.Compare(Read<CombatScenario>(options.Positionals[0]), Read<CombatScenario>(options.Positionals[1])); break;
+                    options.Check(2, "out");
+                    foreach (string file in options.Positionals) ReferenceIndex.EnsureRunnable(ContentProject.Load(new ContentStore(content), repository), JsonNode.Parse(File.ReadAllText(file)));
+                    result = Simulation.Compare(Read<CombatScenario>(options.Positionals[0]), Read<CombatScenario>(options.Positionals[1])); break;
+                case "refs":
+                    options.Check(1, "content", "out"); result = ReferenceIndex.Refs(ContentProject.Load(new ContentStore(content), repository), options.Positionals[0]); break;
+                case "legacy-scan":
+                    options.Check(0, "content", "out"); result = ReferenceIndex.Scan(ContentProject.Load(new ContentStore(content), repository)); break;
+                case "export":
+                    options.Check(0, "content", "out");
+                    Console.Write(UnityJson.Serialize(ContentExport.Export(ContentProject.Load(new ContentStore(content), repository), options.Require("out")))); return 0;
                 case "requests":
                     var requests = new RequestStore(new ContentStore(content));
                     if (options.Positionals.Count == 1 && options.Positionals[0] == "new")
                     {
                         options.Check(1, "content", "kind", "owner", "target", "title", "body", "field", "expected", "created-at");
                         if (!RequestStore.ValidDate(options.Get("created-at", ""))) throw new UsageException("--created-at must be a valid yyyy-MM-dd calendar date.");
-                        RequestRecord created = requests.Create(new RequestRecord
+                        RequestRecord created = ContentEditing.CreateRequest(ContentProject.Load(new ContentStore(content), repository), new RequestRecord
                         {
                             kind = options.Require("kind"), owner = options.Require("owner"), target = options.Require("target"), title = options.Require("title"),
                             body = options.Get("body", ""), field = options.Get("field", ""), expected = options.Get("expected", ""), createdAt = options.Get("created-at", "")
@@ -73,14 +86,14 @@ public static class Program
                     Simulation.Selftest(repository, options.Require("out"));
                     Console.Write(UnityJson.Serialize(new { ok = true, reportCount = 10 })); return 0;
                 case "serve":
-                    options.Check(0, "content", "port");
+                    options.Check(0, "content", "port", "export-out");
                     int port = options.Integer("port", 5178);
                     if (port is < 1 or > 65535) throw new UsageException("Port must be 1..65535.");
                     using (var cancel = new CancellationTokenSource())
                     {
                         ConsoleCancelEventHandler handler = (_, e) => { e.Cancel = true; cancel.Cancel(); };
                         Console.CancelKeyPress += handler;
-                        try { await new LocalServer(new ContentStore(content), repository).Run(port, cancel.Token); }
+                        try { await new LocalServer(new ContentStore(content), repository, options.Has("export-out") ? options.Get("export-out") : null).Run(port, cancel.Token); }
                         finally { Console.CancelKeyPress -= handler; }
                     }
                     return 0;

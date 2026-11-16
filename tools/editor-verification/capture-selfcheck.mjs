@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { runRecorded, sha256, verifySavedBytes, writeJson } from './raw-evidence.mjs';
+
+const output = path.resolve(process.argv[2]);
+await mkdir(output, { recursive: false });
+const stdout = Buffer.from([0x41, 0x0d, 0x0a, 0xff, 0x00]);
+const stderr = Buffer.from([0x45, 0x0d, 0x0a, 0xe4, 0xb8, 0xad, 0x0d, 0x0a]);
+const code = `process.stdout.write(Buffer.from(${JSON.stringify([...stdout])}));process.stderr.write(Buffer.from(${JSON.stringify([...stderr])}));`;
+const receipt = await runRecorded({ executable: process.execPath, args: ['-e', code], cwd: process.cwd(), prefix: path.join(output, 'raw-byte-probe'), timeoutMs: 10000 });
+await verifySavedBytes(receipt);
+assert.equal(receipt.exitCode, 0);
+assert.equal(receipt.timedOut, false);
+assert.deepEqual(await readFile(receipt.stdout.path), stdout);
+assert.deepEqual(await readFile(receipt.stderr.path), stderr);
+assert.equal(receipt.stdout.sha256, sha256(stdout));
+assert.equal(receipt.stderr.sha256, sha256(stderr));
+const summary = { passed: true, scope: 'Evidence collector selfcheck only; not a P1 product acceptance', originalBytes: { stdout: [...stdout], stderr: [...stderr] }, stdout: receipt.stdout, stderr: receipt.stderr };
+await writeJson(path.join(output, 'SELF_CHECK.json'), summary);
+process.stdout.write(`${JSON.stringify(summary)}\n`);

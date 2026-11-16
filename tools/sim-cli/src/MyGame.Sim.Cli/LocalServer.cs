@@ -1,15 +1,19 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http.Features;
 using Prototype.Combat;
 
 namespace MyGame.Sim.Cli;
 
-public sealed class LocalServer(ContentStore content, string repository)
+public sealed class LocalServer(ContentStore content, string repository, string? exportDirectory = null)
 {
-    public const string Version = "0.1.0-p0";
+    public const string Version = "0.2.0-p1";
     private readonly SemaphoreSlim gate = new(1, 1);
+    private string ExportRoot => Path.GetFullPath(exportDirectory ?? (string.Equals(content.Root, Path.Combine(repository, "content"), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+        ? Path.Combine(repository, "Game", "Assets", "StreamingAssets", "Content") : Path.Combine(content.Root, "..", "runtime")));
+    private ContentProject Project() => ContentProject.Load(content, repository);
 
     public async Task Run(int port, CancellationToken cancellation)
     {
@@ -46,7 +50,8 @@ public sealed class LocalServer(ContentStore content, string repository)
                 response.Headers["Access-Control-Allow-Origin"] = origin;
                 response.Headers["Vary"] = "Origin";
                 response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
-                response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
+                response.Headers["Access-Control-Allow-Headers"] = "Content-Type, If-Match, If-None-Match";
+                response.Headers["Access-Control-Expose-Headers"] = "ETag";
             }
             string raw = (context.Features.Get<IHttpRequestFeature>()?.RawTarget ?? "").Split('?')[0];
             string path = Uri.UnescapeDataString(raw);
@@ -55,23 +60,49 @@ public sealed class LocalServer(ContentStore content, string repository)
                 throw new ArgumentException("Invalid content path.");
             if (request.Method == "OPTIONS") { response.StatusCode = 204; return; }
             if (request.Method == "GET" && path == "/api/health")
-                await Reply(200, new { ok = true, version = Version, contentRoot = content.Root, gitCommit = GitCommit(repository) });
+                await Reply(200, new { ok = true, version = Version, contentRoot = content.Root, exportRoot = ExportRoot, gitCommit = GitCommit(repository) });
             else if (request.Method == "GET" && path == "/api/catalog") await Reply(200, Simulation.Catalog());
+            else if (request.Method == "GET" && path == "/api/capabilities")
+                await Reply(200, new { schemaVersion = 1, contentTypes = ContentStore.EntityTypes.Select(type => new { id = type, plural = ContentStore.DirectoryFor(type), label = type == "item" ? "物品" : type, editable = type == "item" }).ToArray(),
+                    itemCategories = ItemValidation.Categories, equipmentSlots = ItemValidation.Slots,
+                    combatBonusFields = JsonSerializer.SerializeToElement(Simulation.Catalog(), new JsonSerializerOptions { IncludeFields = true }).GetProperty("combatBonusFields"), consumableEffectKinds = Array.Empty<string>(), exportRoot = ExportRoot });
+            else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "ids") await Reply(200, Project().Lookup(parts[2]));
+            else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "refs") await Reply(200, ReferenceIndex.Refs(Project(), parts[2]));
+            else if (request.Method == "POST" && path == "/api/validate-item")
+            {
+                JsonObject body = JsonNode.Parse(await Body()) as JsonObject ?? throw new ArgumentException("校验body必须是对象。");
+                if (body["entity"] is not JsonObject entity) throw new ArgumentException("校验body必须包含entity对象。");
+                if (body["requests"] is not null && body["requests"] is not JsonArray) throw new ArgumentException("requests必须是数组。");
+                var drafts = (body["requests"] as JsonArray)?.Select(node => node as JsonObject ?? throw new ArgumentException("需求必须是对象。"));
+                ContentValidation result = Project().ValidateItem(entity, ContentProject.Text(body["mode"]), drafts);
+                await Reply(result.ok ? 200 : 422, result);
+            }
+            else if (request.Method == "POST" && path is "/api/validate-content" or "/api/export")
+            {
+                string rawBody = await Body();
+                if (JsonNode.Parse(rawBody == "" ? "{}" : rawBody) is not JsonObject body || body.Count != 0) throw new ArgumentException("此接口body必须是空对象；目录由serve参数固定。");
+                if (path == "/api/export") await Reply(200, ContentExport.Export(Project(), ExportRoot));
+                else { ContentValidation result = Project().Validate(); await Reply(result.ok ? 200 : 422, result); }
+            }
             else if (request.Method == "POST" && path == "/api/validate")
             {
                 ValidationResult result = Simulation.Validate(UnityJson.Read<CombatScenario>(await Body()));
                 await Reply(result.ok ? 200 : 422, result);
             }
-            else if (request.Method == "POST" && path == "/api/run-combat")
-                await Reply(200, Simulation.Run(UnityJson.Read<CombatScenario>(await Body())));
-            else if (request.Method == "POST" && path == "/api/run-expedition")
-                await Reply(200, Simulation.Expedition(UnityJson.Read<CombatExpeditionConfig>(await Body())));
+            else if (request.Method == "POST" && path is "/api/run-combat" or "/api/run-expedition")
+            {
+                string body = await Body(); ReferenceIndex.EnsureRunnable(Project(), JsonNode.Parse(body));
+                if (path == "/api/run-combat") await Reply(200, Simulation.Run(UnityJson.Read<CombatScenario>(body)));
+                else await Reply(200, Simulation.Expedition(UnityJson.Read<CombatExpeditionConfig>(body)));
+            }
             else if (request.Method == "POST" && path == "/api/compare")
             {
                 using JsonDocument doc = JsonDocument.Parse(await Body());
                 if (doc.RootElement.ValueKind != JsonValueKind.Object ||
                     !doc.RootElement.TryGetProperty("baseline", out var baseline) || !doc.RootElement.TryGetProperty("variant", out var variant))
                     throw new ArgumentException("Compare body must contain baseline and variant objects.");
+                ReferenceIndex.EnsureRunnable(Project(), JsonNode.Parse(baseline.GetRawText()));
+                ReferenceIndex.EnsureRunnable(Project(), JsonNode.Parse(variant.GetRawText()));
                 await Reply(200, Simulation.Compare(UnityJson.Read<CombatScenario>(baseline.GetRawText()), UnityJson.Read<CombatScenario>(variant.GetRawText())));
             }
             else if (request.Method == "GET" && path == "/api/requests") await Reply(200, new RequestStore(content).ReadAll());
@@ -79,7 +110,7 @@ public sealed class LocalServer(ContentStore content, string repository)
             {
                 RequestRecord draft = UnityJson.Read<RequestRecord>(await Body());
                 if (!RequestStore.ValidDate(draft.createdAt)) throw new ArgumentException("createdAt must be empty or a valid yyyy-MM-dd calendar date.");
-                await Reply(201, new RequestStore(content).Create(draft));
+                await Reply(201, ContentEditing.CreateRequest(Project(), draft));
             }
             else if (parts.Length is 3 or 4 && parts[0] == "api" && parts[1] == "content")
             {
@@ -88,25 +119,26 @@ public sealed class LocalServer(ContentStore content, string repository)
                 else if (parts.Length == 4)
                 {
                     string id = parts[3];
-                    string file = content.EntityPath(type, id);
                     if (request.Method == "GET")
                     {
+                        string file = content.EntityPath(type, id);
                         if (!File.Exists(file)) { await Reply(404, new { ok = false, error = "Entity not found." }); return; }
+                        response.Headers["ETag"] = ContentEditing.ETag(file);
                         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(file));
                         await Reply(200, doc.RootElement);
                     }
                     else if (request.Method == "PUT")
                     {
-                        using JsonDocument doc = JsonDocument.Parse(await Body());
-                        ContentValidation result = ContentStore.ValidateEntity(type, id, doc.RootElement);
-                        if (!result.ok) { await Reply(422, result); return; }
-                        UnityJson.WriteFile(file, UnityJson.Serialize(doc.RootElement));
-                        await Reply(200, doc.RootElement);
+                        JsonObject body = JsonNode.Parse(await Body()) as JsonObject ?? throw new ArgumentException("实体必须是对象。");
+                        object result = ContentEditing.Save(Project(), type, id, body, request.Headers["If-Match"].ToString(), request.Headers["If-None-Match"].ToString(), out string etag, out bool created);
+                        response.Headers["ETag"] = etag;
+                        await Reply(created ? 201 : 200, result);
                     }
                     else if (request.Method == "DELETE")
                     {
+                        string file = content.EntityPath(type, id);
                         if (!File.Exists(file)) { await Reply(404, new { ok = false, error = "Entity not found." }); return; }
-                        File.Delete(file);
+                        ContentEditing.Delete(Project(), type, id, request.Headers["If-Match"].ToString());
                         await Reply(200, new { ok = true });
                     }
                     else await Reply(405, new { ok = false, error = "Method not allowed." });
@@ -115,6 +147,7 @@ public sealed class LocalServer(ContentStore content, string repository)
             }
             else await Reply(404, new { ok = false, error = "Route not found." });
         }
+        catch (ContentConflict error) { if (error.ETag != "") response.Headers["ETag"] = error.ETag; await Reply(409, error.Payload); }
         catch (ContentValidationException error) { await Reply(422, error.Result); }
         catch (NotImplementedException error) { await Reply(501, new { ok = false, error = error.Message }); }
         catch (JsonException error) { await Reply(400, new { ok = false, error = error.Message }); }

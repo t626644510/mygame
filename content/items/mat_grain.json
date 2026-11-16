@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "aliases": [],
+  "icon": "",
+  "equipment": {
+    "slot": "",
+    "combatBonus": [],
+    "enhancement": []
+  },
+  "consumable": {
+    "effects": []
+  },
+  "draft": false,
+  "id": "mat_grain",
+  "name": "粮食",
+  "category": "material",
+  "description": "参考价6取自BaseEconomy/default.json的grainUnitPrice。旧配置没有字符串物品ID；grainPerMeal=1仅为首餐测试参数，不新增计量单位。",
+  "stackLimit": 999,
+  "baseValue": 6,
+  "tags": [
+    "food",
+    "ingredient"
+  ]
+}

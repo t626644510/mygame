@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    "expedition-ore"
+  ],
+  "icon": "",
+  "equipment": {
+    "slot": "",
+    "combatBonus": [],
+    "enhancement": []
+  },
+  "consumable": {
+    "effects": []
+  },
+  "draft": false,
+  "id": "expedition_ore",
+  "name": "出征矿料",
+  "category": "material",
+  "description": "参考价待定（暂填4）；第二轮可替换测试数据。旧战斗ID为expedition_ore，旧基地ID为expedition-ore；Helper只解析别名，不改旧Runtime。",
+  "stackLimit": 999,
+  "baseValue": 4,
+  "tags": [
+    "expedition",
+    "enhancement"
+  ]
+}

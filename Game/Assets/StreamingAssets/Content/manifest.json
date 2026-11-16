@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "contentHash": "ed84f792a1aecd7b3a3ec98468464bd969f2486fbab350c32d5aca321d474601",
+  "files": [
+    {
+      "path": "items.json",
+      "sha256": "12ebb6d534e5eca719d93e734f9f7598e9bc17e7fa0a1f604a8cf89b5b9d9903",
+      "count": 5
+    }
+  ]
+}
