@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "building.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "minItems": 0
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    },
+    "footprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "w": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "h": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "required": [
+        "w",
+        "h"
+      ]
+    },
+    "walkableFootprint": {
+      "type": "boolean"
+    },
+    "entrance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 16
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 16
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "function": {
+      "enum": [
+        "workshop",
+        "storage",
+        "housing",
+        "shop",
+        "public_service",
+        "decoration",
+        "pending"
+      ]
+    },
+    "recipeIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "workSlots": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "storageSlots": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "ownership": {
+      "enum": [
+        "public",
+        "private",
+        "both"
+      ]
+    },
+    "buildCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cash": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "workTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "base-common.schema.json#/$defs/amount"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "cash",
+        "workTicks",
+        "materials"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "footprint",
+    "walkableFootprint",
+    "entrance",
+    "function",
+    "recipeIds",
+    "workSlots",
+    "storageSlots",
+    "ownership",
+    "buildCost",
+    "draft"
+  ]
+}

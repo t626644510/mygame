@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "rules_base_item_flows",
+  "sources": [
+    { "itemId": "mat_grain", "kind": "resident_sale", "note": "旧首餐供粮者开局自有，数量及价钱仍为可替换测试配置。" },
+    { "itemId": "quenching_sand", "kind": "resident_sale", "note": "既有备战辅料商出售淬火砂，不新增居民决策运行时。" }
+  ],
+  "sinks": [
+    { "itemId": "con_simple_meal", "kind": "resident_need", "note": "旧首餐顾客消费；此表只用于静态设计分析。" }
+  ],
+  "notes": "建筑与配方目前只做设计和静态检查，游戏运行时尚未接入。"
+}

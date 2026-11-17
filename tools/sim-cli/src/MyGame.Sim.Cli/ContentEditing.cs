@@ -64,7 +64,7 @@ public static class ContentEditing
         }
         ContentValidation validation = prospective.Validate();
         if (!validation.ok) throw new ContentValidationException(validation);
-        if (CombatContent.Types.Contains(ContentStore.CanonicalType(type)))
+        if (CombatContent.Types.Contains(ContentStore.CanonicalType(type)) && !BaseContent.IsFlowRule(type, id))
             CombatImport.TrackEdits(project, ContentStore.CanonicalType(type), id, entity, compound ? body["editIntent"] : null, writes);
         if (createdRequests.Count != 0) writes["REQUESTS.md"] = RequestStore.FormatMarkdown(prospective.Requests());
         // Recheck after validation so an ordinary external edit while validation ran becomes a conflict.

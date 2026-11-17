@@ -43,6 +43,7 @@ public static class ContentExport
             string plural = ContentStore.DirectoryFor(type);
             generated[plural + ".json"] = (UnityJson.Serialize(new JsonObject { ["schemaVersion"] = 1, [plural] = values }), values.Count);
         }
+        BaseChainResult? baseAnalysis = BaseExports.Contribute(project, generated, errors);
         if (errors.Count != 0) throw new ContentValidationException(new(false, errors.ToArray(), Array.Empty<string>()));
         var files = generated.Select(pair => new { path = pair.Key, sha256 = Hash(UnityJson.Utf8.GetBytes(pair.Value.Text)), count = pair.Value.Count }).ToArray();
         string contentHash = Hash(UnityJson.Utf8.GetBytes(string.Concat(files.Select(file => file.path + "\n" + file.sha256 + "\n"))));
@@ -65,10 +66,11 @@ public static class ContentExport
             }
         }
         ContentEditing.Apply(destination, writes);
-        return new { ok = true, contentHash, files, exportRoot = destination.Root };
+        return baseAnalysis is null ? new { ok = true, contentHash, files, exportRoot = destination.Root } :
+            new { ok = true, contentHash, files, exportRoot = destination.Root, analysisWarnings = baseAnalysis.issues, staticOnly = true };
     }
 
-    private static void StripEditorFields(JsonNode? node)
+    internal static void StripEditorFields(JsonNode? node)
     {
         if (node is JsonObject obj)
         {

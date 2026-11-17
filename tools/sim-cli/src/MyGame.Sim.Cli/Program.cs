@@ -15,7 +15,7 @@ public static class Program
         {
             if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
             {
-                Console.Write("sim-cli: catalog | validate | refs | legacy-scan | export | import-scenario | import-expedition | assemble | run-trial | export-scenario | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
+                Console.Write("sim-cli: catalog | validate | refs | legacy-scan | export | import-first-meal | layout-check | analyze-chain | import-scenario | import-expedition | assemble | run-trial | export-scenario | run-combat | run-expedition | compare | requests | selftest round4 | serve\nSee tools/sim-cli/README.md for arguments.\n");
                 return args.Length == 0 ? 2 : 0;
             }
             var options = new Options(args.Skip(1).ToArray());
@@ -25,6 +25,17 @@ public static class Program
             int exitCode = 0;
             switch (args[0])
             {
+                case "import-first-meal":
+                    options.Check(0, "content", "out");
+                    result = BaseImport.FirstMeal(ContentProject.Load(new ContentStore(content), repository)); break;
+                case "analyze-chain":
+                    options.Check(0, "content", "out");
+                    result = BaseChains.Analyze(ContentProject.Load(new ContentStore(content), repository)); break;
+                case "layout-check":
+                    options.Check(1, "content", "out");
+                    ContentProject layoutProject = ContentProject.Load(new ContentStore(content), repository);
+                    LayoutCheckResult layoutResult = BaseLayouts.Check(layoutProject, CombatContent.Entity(layoutProject, "layout", options.Positionals[0]));
+                    result = layoutResult; exitCode = layoutResult.ok ? 0 : 1; break;
                 case "import-scenario":
                 case "import-expedition":
                     options.Check(1, "content", "prefix", "out");
@@ -55,7 +66,7 @@ public static class Program
                     if (options.Has("content"))
                     {
                         options.Check(0, "content", "out");
-                        ContentValidation validation = ContentProject.Load(new ContentStore(content), repository).Validate();
+                        ContentValidation validation = ContentProject.Load(new ContentStore(content), repository).Validate(includeBaseDiagnostics: true);
                         result = validation; exitCode = validation.ok ? 0 : 1;
                         foreach (ContentError error in validation.errors) Console.Error.WriteLine(error.path + ": " + error.message);
                     }

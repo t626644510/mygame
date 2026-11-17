@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "layout_first_meal_far",
+  "name": "首餐·远厨房",
+  "width": 10,
+  "height": 5,
+  "movementTicksPerTile": 1,
+  "tiles": [],
+  "buildings": [
+    {
+      "instanceId": "kitchen_01",
+      "buildingId": "bld_legacy_kitchen",
+      "x": 8,
+      "y": 2,
+      "rotation": 0,
+      "ownership": "private"
+    }
+  ],
+  "spawns": [
+    {
+      "id": "supplier",
+      "x": 1,
+      "y": 2,
+      "role": "supplier"
+    },
+    {
+      "id": "customer",
+      "x": 0,
+      "y": 2,
+      "role": "customer"
+    }
+  ],
+  "zones": [],
+  "draft": false,
+  "notes": "全部金额、库存、坐标与工时均为首餐测试值，尚非正式平衡参数。12为招募override；厨房为开局预置，移动位置不代表免费建设。"
+}

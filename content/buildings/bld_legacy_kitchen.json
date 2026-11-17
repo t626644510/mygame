@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "bld_legacy_kitchen",
+  "name": "首餐预置厨房",
+  "description": "旧首餐点状设施的静态设计映射，不代表免费建设或通用建筑运行时。",
+  "footprint": {
+    "w": 1,
+    "h": 1
+  },
+  "walkableFootprint": true,
+  "entrance": {
+    "x": 0,
+    "y": 0
+  },
+  "function": "workshop",
+  "recipeIds": [
+    "rcp_simple_meal"
+  ],
+  "workSlots": 1,
+  "storageSlots": 0,
+  "ownership": "both",
+  "buildCost": {
+    "cash": 0,
+    "workTicks": 0,
+    "materials": []
+  },
+  "draft": false,
+  "notes": "旧场景没有建设价和施工字段；0仅静态占位，不能作为免费建设或正式经济规则。"
+}

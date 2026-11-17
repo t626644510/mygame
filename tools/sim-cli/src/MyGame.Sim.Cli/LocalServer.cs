@@ -9,7 +9,7 @@ namespace MyGame.Sim.Cli;
 
 public sealed class LocalServer(ContentStore content, string repository, string? exportDirectory = null)
 {
-    public const string Version = "0.3.0-p2";
+    public const string Version = "0.4.0-p3";
     private readonly SemaphoreSlim gate = new(1, 1);
     private string ExportRoot => Path.GetFullPath(exportDirectory ?? (string.Equals(content.Root, Path.Combine(repository, "content"), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
         ? Path.Combine(repository, "Game", "Assets", "StreamingAssets", "Content") : Path.Combine(content.Root, "..", "runtime")));
@@ -63,9 +63,24 @@ public sealed class LocalServer(ContentStore content, string repository, string?
                 await Reply(200, new { ok = true, version = Version, contentRoot = content.Root, exportRoot = ExportRoot, gitCommit = GitCommit(repository) });
             else if (request.Method == "GET" && path == "/api/catalog") await Reply(200, Simulation.Catalog());
             else if (request.Method == "GET" && path == "/api/capabilities")
-                await Reply(200, new { schemaVersion = 1, contentTypes = ContentStore.EntityTypes.Select(type => new { id = type, plural = ContentStore.DirectoryFor(type), label = type == "item" ? "物品" : type, editable = type == "item" || CombatContent.Types.Contains(type) && type != "rule" }).ToArray(),
+                await Reply(200, new { schemaVersion = 1, contentTypes = ContentStore.EntityTypes.Select(type => new { id = type, plural = ContentStore.DirectoryFor(type), label = type == "item" ? "物品" : type, editable = type == "item" || BaseContent.Types.Contains(type) || CombatContent.Types.Contains(type) && type != "rule" }).ToArray(),
                     itemCategories = ItemValidation.Categories, equipmentSlots = ItemValidation.Slots,
-                    combatBonusFields = JsonSerializer.SerializeToElement(Simulation.Catalog(), new JsonSerializerOptions { IncludeFields = true }).GetProperty("combatBonusFields"), consumableEffectKinds = Array.Empty<string>(), exportRoot = ExportRoot });
+                    combatBonusFields = JsonSerializer.SerializeToElement(Simulation.Catalog(), new JsonSerializerOptions { IncludeFields = true }).GetProperty("combatBonusFields"), consumableEffectKinds = Array.Empty<string>(), exportRoot = ExportRoot,
+                    @base = new { staticOnly = true, notice = BaseContent.StaticNotice, buildingFunctions = BaseContent.Functions, sourceKinds = BaseContent.SourceKinds, sinkKinds = BaseContent.SinkKinds, editableRuleIds = new[] { BaseContent.FlowRulesId }, farFromStorageThreshold = BaseLayouts.FarFromStorageThreshold } });
+            else if (request.Method == "POST" && path == "/api/layout/check")
+            {
+                JsonObject body = CombatContent.Object(JsonNode.Parse(await Body()));
+                if (body.Count != 1 || body["layout"] is not JsonObject layout) throw new ArgumentException("layout/check body必须为{layout}。");
+                await Reply(200, BaseLayouts.Check(Project(), layout));
+            }
+            else if (request.Method == "POST" && path == "/api/layout/distance") await Reply(200, BaseLayouts.Distance(Project(), CombatContent.Object(JsonNode.Parse(await Body()))));
+            else if (request.Method == "GET" && path == "/api/chain") await Reply(200, BaseChains.Analyze(Project()));
+            else if (request.Method == "POST" && path == "/api/import-first-meal")
+            {
+                JsonObject body = CombatContent.Object(JsonNode.Parse(await Body()));
+                if (body.Count != 0) throw new ArgumentException("首餐导入body必须为{}，来源固定为旧default.json。");
+                await Reply(200, BaseImport.FirstMeal(Project()));
+            }
             else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "ids") await Reply(200, Project().Lookup(parts[2]));
             else if (request.Method == "GET" && parts.Length == 3 && parts[0] == "api" && parts[1] == "refs") await Reply(200, ReferenceIndex.Refs(Project(), parts[2]));
             else if (request.Method == "POST" && path is "/api/import-scenario" or "/api/import-expedition")
@@ -93,7 +108,7 @@ public sealed class LocalServer(ContentStore content, string repository, string?
                 string type = ContentStore.CanonicalType(CombatContent.Text(body["type"]));
                 JsonObject entity = CombatContent.Object(body["entity"]);
                 ContentValidation result = CombatContent.ValidateCandidate(project, type, entity, CombatContent.Text(body["mode"]), body["requests"] as JsonArray);
-                if (result.ok && CombatContent.Types.Contains(type)) CombatImport.TrackEdits(project, type, CombatContent.Text(entity["id"]), entity, body["editIntent"], new Dictionary<string, string?>(StringComparer.Ordinal));
+                if (result.ok && CombatContent.Types.Contains(type) && !BaseContent.IsFlowRule(type, CombatContent.Text(entity["id"]))) CombatImport.TrackEdits(project, type, CombatContent.Text(entity["id"]), entity, body["editIntent"], new Dictionary<string, string?>(StringComparer.Ordinal));
                 await Reply(result.ok ? 200 : 422, result);
             }
             else if (request.Method == "POST" && path == "/api/validate-item")
@@ -110,7 +125,7 @@ public sealed class LocalServer(ContentStore content, string repository, string?
                 string rawBody = await Body();
                 if (JsonNode.Parse(rawBody == "" ? "{}" : rawBody) is not JsonObject body || body.Count != 0) throw new ArgumentException("此接口body必须是空对象；目录由serve参数固定。");
                 if (path == "/api/export") await Reply(200, ContentExport.Export(Project(), ExportRoot));
-                else { ContentValidation result = Project().Validate(); await Reply(result.ok ? 200 : 422, result); }
+                else { ContentValidation result = Project().Validate(includeBaseDiagnostics: true); await Reply(result.ok ? 200 : 422, result); }
             }
             else if (request.Method == "POST" && path == "/api/validate")
             {
