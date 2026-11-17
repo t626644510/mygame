@@ -50,6 +50,7 @@ const readJson = async file => JSON.parse(await readFile(file, 'utf8'));
 const itemPath = id => path.join(content, 'items', `${id}.json`);
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const bareItem = (id, category = 'material') => ({ schemaVersion: 1, id, aliases: [], name: `隔离验收 ${id}`, category, description: '仅在隔离测试数据中使用。', icon: '', stackLimit: category === 'equipment' ? 1 : 99, baseValue: 0, tags: [], equipment: { slot: category === 'equipment' ? 'weapon' : '', combatBonus: [], enhancement: [] }, consumable: { effects: [] }, draft: false });
+const independentDraftId = 'con_p1_draft_probe';
 async function saveFixtureItem(root, item) { await writeJson(path.join(root, 'items', `${item.id}.json`), item); }
 async function allItems(root = content) { return Promise.all((await readdir(path.join(root, 'items'))).filter(file => file.endsWith('.json')).sort().map(file => readJson(path.join(root, 'items', file)))); }
 async function phase(id, action) {
@@ -265,23 +266,24 @@ try {
     return { pureValidation422: true, putPrecondition409: true, selfUpdateExclusion: true, crossTypePool: true, etagIsPhysicalFileSha256: true, nestedUnknownFieldsRefusedWithoutWrites: nestedCases };
   });
   await phase('B6.api-atomic-draft-request-and-alias-target', async () => {
-    const meal = await getAndVerifyEtag('con_simple_meal');
-    const entity = structuredClone(meal.json); entity.draft = true; entity.consumable.effects = [{ kind: 'restore_hunger', note: '仅隔离验收，尚未实现。' }];
-    require422(await unchanged(content, () => api('/api/content/item/con_simple_meal', 'PUT', { entity, requests: [] }, { 'If-Match': meal.response.headers.etag })));
+    await newItem(bareItem(independentDraftId, 'consumable'));
+    const draftBase = await getAndVerifyEtag(independentDraftId);
+    const entity = structuredClone(draftBase.json); entity.draft = true; entity.consumable.effects = [{ kind: 'restore_hunger', note: '仅隔离验收，尚未实现。' }];
+    require422(await unchanged(content, () => api(`/api/content/item/${independentDraftId}`, 'PUT', { entity, requests: [] }, { 'If-Match': draftBase.response.headers.etag })));
     const invalidRequest = { kind: 'new_item_property', owner: 'engineering', title: '', body: 'P1只登记，不实现效果。' };
-    require422(await unchanged(content, () => api('/api/content/item/con_simple_meal', 'PUT', { entity, requests: [invalidRequest] }, { 'If-Match': meal.response.headers.etag })));
+    require422(await unchanged(content, () => api(`/api/content/item/${independentDraftId}`, 'PUT', { entity, requests: [invalidRequest] }, { 'If-Match': draftBase.response.headers.etag })));
     const request = { kind: 'new_item_property', owner: 'engineering', title: '恢复饥饿', body: 'P1只登记，不实现效果。', expected: '待专项另行确认', field: 'consumable.effects' };
-    const saved = await api('/api/content/item/con_simple_meal', 'PUT', { entity, requests: [request] }, { 'If-Match': meal.response.headers.etag });
+    const saved = await api(`/api/content/item/${independentDraftId}`, 'PUT', { entity, requests: [request] }, { 'If-Match': draftBase.response.headers.etag });
     assert.equal(saved.status, 200); assert.equal(saved.json.entity.draft, true); assert.equal(saved.json.createdRequests.length, 1);
-    const created = saved.json.createdRequests[0]; assert.equal(created.target, 'item:con_simple_meal'); assert.equal(created.owner, 'engineering'); assert.equal(created.status, 'open');
-    assert.deepEqual(await readJson(itemPath('con_simple_meal')), saved.json.entity); assert.deepEqual(await readJson(path.join(content, '_requests', `${created.id}.json`)), created);
+    const created = saved.json.createdRequests[0]; assert.equal(created.target, `item:${independentDraftId}`); assert.equal(created.owner, 'engineering'); assert.equal(created.status, 'open');
+    assert.deepEqual(await readJson(itemPath(independentDraftId)), saved.json.entity); assert.deepEqual(await readJson(path.join(content, '_requests', `${created.id}.json`)), created);
     const markdown = await readFile(path.join(content, 'REQUESTS.md'), 'utf8');
     const engineering = markdown.split('## engineering\n')[1]?.split('\n## ')[0] ?? '';
     assert.ok(engineering.includes(`${created.id} — 恢复饥饿`), 'Created request must appear in the engineering group.');
     const aliasRequest = await api('/api/requests', 'POST', { kind: 'note', owner: 'engineering', target: 'item:expedition-ore', title: 'alias target isolated acceptance' }); assert.equal(aliasRequest.status, 201);
     const validate = await api('/api/validate-content', 'POST', {}); assert.equal(validate.status, 200); assert.equal(validate.json.ok, true);
     const scenario = await readJson(path.join(repository, 'Game/Assets/StreamingAssets/Prototype/Combat/round2_equipment.json'));
-    scenario.units[0].equipmentSourceId = 'con_simple_meal';
+    scenario.units[0].equipmentSourceId = independentDraftId;
     const trial = await unchanged(content, () => api('/api/run-combat', 'POST', scenario)); assert.equal(trial.status, 422);
     const draftMaterial = bareItem('mat_draft_dependency'); draftMaterial.draft = true; await newItem(draftMaterial);
     const indirect = bareItem('eq_active_dependency', 'equipment'); indirect.equipment.enhancement = [{ level: 1, cash: 0, attackBonusDelta: 1, materials: [{ itemId: draftMaterial.id, quantity: 1 }] }]; await newItem(indirect);
@@ -302,7 +304,9 @@ try {
     await writeFile(path.join(runtime, 'items.json.meta'), 'fileFormatVersion: 2\nguid: 11111111111111111111111111111111\n');
     await checkExport(content, runtime);
     const firstItems = await readJson(path.join(runtime, 'items.json'));
-    assert.equal(firstItems.items.some(item => item.id === 'con_simple_meal'), false);
+    assert.equal(firstItems.items.some(item => item.id === independentDraftId), false);
+    assert.ok(firstItems.items.some(item => item.id === 'con_simple_meal'));
+    assert.deepEqual(firstItems.items.map(item => item.id).sort(), [...baseline.items.map(item => item.id), 'mat_alias_owner'].sort());
     assert.ok(firstItems.items.some(item => item.id === 'eq_patrol_sword'));
     const manifestPath = path.join(runtime, 'manifest.json'); const oldManifest = await readJson(manifestPath);
     const retired = Buffer.from('{"schemaVersion":1,"retired":true}\n');
@@ -318,7 +322,7 @@ try {
     const badExport = await unchanged(runtime, () => call('export', '--content', content, '--out', runtime)); assert.equal(badExport.exitCode, 1);
     const badHttp = await unchanged(runtime, () => api('/api/export', 'POST', {})); require422(badHttp);
     await unlink(itemPath(invalid.id));
-    const active = bareItem('eq_active_ref_draft', 'equipment'); active.equipment.enhancement = [{ level: 1, cash: 0, attackBonusDelta: 1, materials: [{ itemId: 'con_simple_meal', quantity: 1 }] }];
+    const active = bareItem('eq_active_ref_draft', 'equipment'); active.equipment.enhancement = [{ level: 1, cash: 0, attackBonusDelta: 1, materials: [{ itemId: independentDraftId, quantity: 1 }] }];
     await saveFixtureItem(content, active);
     const dangling = await unchanged(runtime, () => call('export', '--content', content, '--out', runtime)); assert.equal(dangling.exitCode, 1);
     await unlink(itemPath(active.id));
